@@ -4,6 +4,7 @@ There's something magical about demonstrating a powerful concept with ~250 lines
 
 ## Contents
 
+* [Packrat parsing](./packrat-parsing/)
 * [Virtual DOM](./virtual-dom/)
 
 ## Contributing
