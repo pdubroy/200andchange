@@ -34,6 +34,9 @@ var listener = function (event) {
 var getKey = (vdom) => (vdom == null ? vdom : vdom.key)
 
 var patchProperty = (node, key, oldValue, newValue, isSvg) => {
+  // "key" is a not a real DOM attribute, it's used in the diff algorithm,
+  // much like in React.
+  // See [Why does React need keys?](https://react.dev/learn/rendering-lists#why-does-react-need-keys) for more details.
   if (key === "key") {
   } else if (key[0] === "o" && key[1] === "n") {
     if (
@@ -106,6 +109,8 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
 
     isSvg = isSvg || newVNode.tag === "svg"
 
+    // We include `oldProps` here because any key that is in `oldProps` but
+    // not in `newProps` needs to be restored to its original value.
     for (var i in { ...oldProps, ...newProps }) {
       if (
         (i === "value" || i === "selected" || i === "checked"
