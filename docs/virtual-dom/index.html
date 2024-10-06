@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Virtual DOM</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-1">&#x00a7;</a>
+              </div>
+              <h1 id="virtual-dom">Virtual DOM</h1>
+<p>This is an implementation of a <a href="https://en.wikipedia.org/wiki/Virtual_DOM">virtual DOM</a>, as seen in libraries like
+<a href="https://reactjs.org/">React</a>.</p>
+<p>It comes from <a href="https://github.com/jorgebucaran/superfine/">Superfine</a> (<a href="https://github.com/jorgebucaran/superfine/blob/145ab11d70e94619e593f63139e218fa73d1b291/index.js">145ab11</a>) by Jorge Bucaran:</p>
+<p><em>Superfine is a minimal view layer for building web interfaces. Think
+<a href="https://github.com/jorgebucaran/hyperapp">Hyperapp</a> without the framework—no state machines, effects, or
+subscriptions—just the absolute bare minimum (1 kB minified+gzipped).
+Mix it with your favorite state management library or use it standalone
+for maximum flexibility.</em></p>
+<p><strong>License:</strong> <a href="https://github.com/jorgebucaran/superfine/blob/145ab11d70e94619e593f63139e218fa73d1b291/LICENSE.md">MIT</a><br>
+<strong>Copyright:</strong> © 2018 <a href="https://jorgebucaran.com">Jorge Bucaran</a></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-keyword">var</span> <span class="hljs-variable constant_">SSR_NODE</span> = <span class="hljs-number">1</span>,
+  <span class="hljs-variable constant_">TEXT_NODE</span> = <span class="hljs-number">3</span>,
+  <span class="hljs-variable constant_">EMPTY_OBJ</span> = {},
+  <span class="hljs-variable constant_">EMPTY_ARR</span> = [],
+  <span class="hljs-variable constant_">SVG_NS</span> = <span class="hljs-string">&quot;http://www.w3.org/2000/svg&quot;</span>
+
+<span class="hljs-keyword">var</span> listener = <span class="hljs-keyword">function</span> (<span class="hljs-params">event</span>) {
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">events</span>[event.<span class="hljs-property">type</span>](event)
+}
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">getKey</span> = (<span class="hljs-params">vdom</span>) =&gt; (vdom == <span class="hljs-literal">null</span> ? vdom : vdom.<span class="hljs-property">key</span>)
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">patchProperty</span> = (<span class="hljs-params">node, key, oldValue, newValue, isSvg</span>) =&gt; {
+  <span class="hljs-keyword">if</span> (key === <span class="hljs-string">&quot;key&quot;</span>) {
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (key[<span class="hljs-number">0</span>] === <span class="hljs-string">&quot;o&quot;</span> &amp;&amp; key[<span class="hljs-number">1</span>] === <span class="hljs-string">&quot;n&quot;</span>) {
+    <span class="hljs-keyword">if</span> (
+      !((node.<span class="hljs-property">events</span> || (node.<span class="hljs-property">events</span> = {}))[(key = key.<span class="hljs-title function_">slice</span>(<span class="hljs-number">2</span>))] = newValue)
+    ) {
+      node.<span class="hljs-title function_">removeEventListener</span>(key, listener)
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!oldValue) {
+      node.<span class="hljs-title function_">addEventListener</span>(key, listener)
+    }
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!isSvg &amp;&amp; key !== <span class="hljs-string">&quot;list&quot;</span> &amp;&amp; key !== <span class="hljs-string">&quot;form&quot;</span> &amp;&amp; key <span class="hljs-keyword">in</span> node) {
+    node[key] = newValue == <span class="hljs-literal">null</span> ? <span class="hljs-string">&quot;&quot;</span> : newValue
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (newValue == <span class="hljs-literal">null</span> || newValue === <span class="hljs-literal">false</span>) {
+    node.<span class="hljs-title function_">removeAttribute</span>(key)
+  } <span class="hljs-keyword">else</span> {
+    node.<span class="hljs-title function_">setAttribute</span>(key, newValue)
+  }
+}
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">createNode</span> = (<span class="hljs-params">vdom, isSvg</span>) =&gt; {
+  <span class="hljs-keyword">var</span> props = vdom.<span class="hljs-property">props</span>,
+    node =
+      vdom.<span class="hljs-property">type</span> === <span class="hljs-variable constant_">TEXT_NODE</span>
+        ? <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">createTextNode</span>(vdom.<span class="hljs-property">tag</span>)
+        : (isSvg = isSvg || vdom.<span class="hljs-property">tag</span> === <span class="hljs-string">&quot;svg&quot;</span>)
+        ? <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">createElementNS</span>(<span class="hljs-variable constant_">SVG_NS</span>, vdom.<span class="hljs-property">tag</span>, { <span class="hljs-attr">is</span>: props.<span class="hljs-property">is</span> })
+        : <span class="hljs-variable language_">document</span>.<span class="hljs-title function_">createElement</span>(vdom.<span class="hljs-property">tag</span>, { <span class="hljs-attr">is</span>: props.<span class="hljs-property">is</span> })
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> props) {
+    <span class="hljs-title function_">patchProperty</span>(node, k, <span class="hljs-literal">null</span>, props[k], isSvg)
+  }
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; vdom.<span class="hljs-property">children</span>.<span class="hljs-property">length</span>; i++) {
+    node.<span class="hljs-title function_">appendChild</span>(
+      <span class="hljs-title function_">createNode</span>((vdom.<span class="hljs-property">children</span>[i] = <span class="hljs-title function_">vdomify</span>(vdom.<span class="hljs-property">children</span>[i])), isSvg)
+    )
+  }
+
+  <span class="hljs-keyword">return</span> (vdom.<span class="hljs-property">node</span> = node)
+}
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">patchNode</span> = (<span class="hljs-params">parent, node, oldVNode, newVNode, isSvg</span>) =&gt; {
+  <span class="hljs-keyword">if</span> (oldVNode === newVNode) {
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (
+    oldVNode != <span class="hljs-literal">null</span> &amp;&amp;
+    oldVNode.<span class="hljs-property">type</span> === <span class="hljs-variable constant_">TEXT_NODE</span> &amp;&amp;
+    newVNode.<span class="hljs-property">type</span> === <span class="hljs-variable constant_">TEXT_NODE</span>
+  ) {
+    <span class="hljs-keyword">if</span> (oldVNode.<span class="hljs-property">tag</span> !== newVNode.<span class="hljs-property">tag</span>) node.<span class="hljs-property">nodeValue</span> = newVNode.<span class="hljs-property">tag</span>
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (oldVNode == <span class="hljs-literal">null</span> || oldVNode.<span class="hljs-property">tag</span> !== newVNode.<span class="hljs-property">tag</span>) {
+    node = parent.<span class="hljs-title function_">insertBefore</span>(
+      <span class="hljs-title function_">createNode</span>((newVNode = <span class="hljs-title function_">vdomify</span>(newVNode)), isSvg),
+      node
+    )
+    <span class="hljs-keyword">if</span> (oldVNode != <span class="hljs-literal">null</span>) {
+      parent.<span class="hljs-title function_">removeChild</span>(oldVNode.<span class="hljs-property">node</span>)
+    }
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">var</span> tmpVKid,
+      oldVKid,
+      oldKey,
+      newKey,
+      oldProps = oldVNode.<span class="hljs-property">props</span>,
+      newProps = newVNode.<span class="hljs-property">props</span>,
+      oldVKids = oldVNode.<span class="hljs-property">children</span>,
+      newVKids = newVNode.<span class="hljs-property">children</span>,
+      oldHead = <span class="hljs-number">0</span>,
+      newHead = <span class="hljs-number">0</span>,
+      oldTail = oldVKids.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>,
+      newTail = newVKids.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>
+
+    isSvg = isSvg || newVNode.<span class="hljs-property">tag</span> === <span class="hljs-string">&quot;svg&quot;</span>
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> { ...oldProps, ...newProps }) {
+      <span class="hljs-keyword">if</span> (
+        (i === <span class="hljs-string">&quot;value&quot;</span> || i === <span class="hljs-string">&quot;selected&quot;</span> || i === <span class="hljs-string">&quot;checked&quot;</span>
+          ? node[i]
+          : oldProps[i]) !== newProps[i]
+      ) {
+        <span class="hljs-title function_">patchProperty</span>(node, i, oldProps[i], newProps[i], isSvg)
+      }
+    }
+
+    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
+      <span class="hljs-keyword">if</span> (
+        (oldKey = <span class="hljs-title function_">getKey</span>(oldVKids[oldHead])) == <span class="hljs-literal">null</span> ||
+        oldKey !== <span class="hljs-title function_">getKey</span>(newVKids[newHead])
+      ) {
+        <span class="hljs-keyword">break</span>
+      }
+
+      <span class="hljs-title function_">patchNode</span>(
+        node,
+        oldVKids[oldHead].<span class="hljs-property">node</span>,
+        oldVKids[oldHead++],
+        (newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead++])),
+        isSvg
+      )
+    }
+
+    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
+      <span class="hljs-keyword">if</span> (
+        (oldKey = <span class="hljs-title function_">getKey</span>(oldVKids[oldTail])) == <span class="hljs-literal">null</span> ||
+        oldKey !== <span class="hljs-title function_">getKey</span>(newVKids[newTail])
+      ) {
+        <span class="hljs-keyword">break</span>
+      }
+
+      <span class="hljs-title function_">patchNode</span>(
+        node,
+        oldVKids[oldTail].<span class="hljs-property">node</span>,
+        oldVKids[oldTail--],
+        (newVKids[newTail] = <span class="hljs-title function_">vdomify</span>(newVKids[newTail--])),
+        isSvg
+      )
+    }
+
+    <span class="hljs-keyword">if</span> (oldHead &gt; oldTail) {
+      <span class="hljs-keyword">while</span> (newHead &lt;= newTail) {
+        node.<span class="hljs-title function_">insertBefore</span>(
+          <span class="hljs-title function_">createNode</span>((newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead++])), isSvg),
+          (oldVKid = oldVKids[oldHead]) &amp;&amp; oldVKid.<span class="hljs-property">node</span>
+        )
+      }
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (newHead &gt; newTail) {
+      <span class="hljs-keyword">while</span> (oldHead &lt;= oldTail) {
+        node.<span class="hljs-title function_">removeChild</span>(oldVKids[oldHead++].<span class="hljs-property">node</span>)
+      }
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> keyed = {}, newKeyed = {}, i = oldHead; i &lt;= oldTail; i++) {
+        <span class="hljs-keyword">if</span> ((oldKey = oldVKids[i].<span class="hljs-property">key</span>) != <span class="hljs-literal">null</span>) {
+          keyed[oldKey] = oldVKids[i]
+        }
+      }
+
+      <span class="hljs-keyword">while</span> (newHead &lt;= newTail) {
+        oldKey = <span class="hljs-title function_">getKey</span>((oldVKid = oldVKids[oldHead]))
+        newKey = <span class="hljs-title function_">getKey</span>((newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead])))
+
+        <span class="hljs-keyword">if</span> (
+          newKeyed[oldKey] ||
+          (newKey != <span class="hljs-literal">null</span> &amp;&amp; newKey === <span class="hljs-title function_">getKey</span>(oldVKids[oldHead + <span class="hljs-number">1</span>]))
+        ) {
+          <span class="hljs-keyword">if</span> (oldKey == <span class="hljs-literal">null</span>) {
+            node.<span class="hljs-title function_">removeChild</span>(oldVKid.<span class="hljs-property">node</span>)
+          }
+          oldHead++
+          <span class="hljs-keyword">continue</span>
+        }
+
+        <span class="hljs-keyword">if</span> (newKey == <span class="hljs-literal">null</span> || oldVNode.<span class="hljs-property">type</span> === <span class="hljs-variable constant_">SSR_NODE</span>) {
+          <span class="hljs-keyword">if</span> (oldKey == <span class="hljs-literal">null</span>) {
+            <span class="hljs-title function_">patchNode</span>(
+              node,
+              oldVKid &amp;&amp; oldVKid.<span class="hljs-property">node</span>,
+              oldVKid,
+              newVKids[newHead],
+              isSvg
+            )
+            newHead++
+          }
+          oldHead++
+        } <span class="hljs-keyword">else</span> {
+          <span class="hljs-keyword">if</span> (oldKey === newKey) {
+            <span class="hljs-title function_">patchNode</span>(node, oldVKid.<span class="hljs-property">node</span>, oldVKid, newVKids[newHead], isSvg)
+            newKeyed[newKey] = <span class="hljs-literal">true</span>
+            oldHead++
+          } <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">if</span> ((tmpVKid = keyed[newKey]) != <span class="hljs-literal">null</span>) {
+              <span class="hljs-title function_">patchNode</span>(
+                node,
+                node.<span class="hljs-title function_">insertBefore</span>(tmpVKid.<span class="hljs-property">node</span>, oldVKid &amp;&amp; oldVKid.<span class="hljs-property">node</span>),
+                tmpVKid,
+                newVKids[newHead],
+                isSvg
+              )
+              newKeyed[newKey] = <span class="hljs-literal">true</span>
+            } <span class="hljs-keyword">else</span> {
+              <span class="hljs-title function_">patchNode</span>(
+                node,
+                oldVKid &amp;&amp; oldVKid.<span class="hljs-property">node</span>,
+                <span class="hljs-literal">null</span>,
+                newVKids[newHead],
+                isSvg
+              )
+            }
+          }
+          newHead++
+        }
+      }
+
+      <span class="hljs-keyword">while</span> (oldHead &lt;= oldTail) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-title function_">getKey</span>((oldVKid = oldVKids[oldHead++])) == <span class="hljs-literal">null</span>) {
+          node.<span class="hljs-title function_">removeChild</span>(oldVKid.<span class="hljs-property">node</span>)
+        }
+      }
+
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> keyed) {
+        <span class="hljs-keyword">if</span> (newKeyed[i] == <span class="hljs-literal">null</span>) {
+          node.<span class="hljs-title function_">removeChild</span>(keyed[i].<span class="hljs-property">node</span>)
+        }
+      }
+    }
+  }
+
+  <span class="hljs-keyword">return</span> (newVNode.<span class="hljs-property">node</span> = node)
+}
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">vdomify</span> = (<span class="hljs-params">newVNode</span>) =&gt;
+  newVNode !== <span class="hljs-literal">true</span> &amp;&amp; newVNode !== <span class="hljs-literal">false</span> &amp;&amp; newVNode ? newVNode : <span class="hljs-title function_">text</span>(<span class="hljs-string">&quot;&quot;</span>)
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">recycleNode</span> = (<span class="hljs-params">node</span>) =&gt;
+  node.<span class="hljs-property">nodeType</span> === <span class="hljs-variable constant_">TEXT_NODE</span>
+    ? <span class="hljs-title function_">text</span>(node.<span class="hljs-property">nodeValue</span>, node)
+    : <span class="hljs-title function_">createVNode</span>(
+        node.<span class="hljs-property">nodeName</span>.<span class="hljs-title function_">toLowerCase</span>(),
+        <span class="hljs-variable constant_">EMPTY_OBJ</span>,
+        <span class="hljs-variable constant_">EMPTY_ARR</span>.<span class="hljs-property">map</span>.<span class="hljs-title function_">call</span>(node.<span class="hljs-property">childNodes</span>, recycleNode),
+        <span class="hljs-variable constant_">SSR_NODE</span>,
+        node
+      )
+
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">createVNode</span> = (<span class="hljs-params">tag, props, children, type, node</span>) =&gt; ({
+  tag,
+  props,
+  <span class="hljs-attr">key</span>: props.<span class="hljs-property">key</span>,
+  children,
+  type,
+  node,
+})
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> <span class="hljs-title function_">text</span> = (<span class="hljs-params">value, node</span>) =&gt;
+  <span class="hljs-title function_">createVNode</span>(value, <span class="hljs-variable constant_">EMPTY_OBJ</span>, <span class="hljs-variable constant_">EMPTY_ARR</span>, <span class="hljs-variable constant_">TEXT_NODE</span>, node)
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> <span class="hljs-title function_">h</span> = (<span class="hljs-params">tag, props, children = EMPTY_ARR</span>) =&gt;
+  <span class="hljs-title function_">createVNode</span>(tag, props, <span class="hljs-title class_">Array</span>.<span class="hljs-title function_">isArray</span>(children) ? children : [children])
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">var</span> <span class="hljs-title function_">patch</span> = (<span class="hljs-params">node, vdom</span>) =&gt; (
+  ((node = <span class="hljs-title function_">patchNode</span>(
+    node.<span class="hljs-property">parentNode</span>,
+    node,
+    node.<span class="hljs-property">vdom</span> || <span class="hljs-title function_">recycleNode</span>(node),
+    vdom
+  )).<span class="hljs-property">vdom</span> = vdom),
+  node
+)</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

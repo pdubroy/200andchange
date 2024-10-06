@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "devDependencies": {
+    "docco": "^0.9.1"
+  },
+  "scripts": {
+    "docco": "cd code && find . -name '*.js' | xargs docco",
+    "gen-site": "npm run docco && rm -rf docs && mv code/docs ."
+  }
+}
