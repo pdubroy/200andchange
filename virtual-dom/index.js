@@ -111,7 +111,11 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
 
     // We include `oldProps` here because any key that is in `oldProps` but
     // not in `newProps` needs to be restored to its original value.
+    // See the call to `node.removeAttribute` in `patchProperty`.
     for (var i in { ...oldProps, ...newProps }) {
+      // **Optimization:** skip patching if the values are the same.
+      // Some props can change through user interaction, so it's not relevant
+      // what is in the old vnode, but rather what's in the DOM.
       if (
         (i === "value" || i === "selected" || i === "checked"
           ? node[i]
