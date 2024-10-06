@@ -125,6 +125,16 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
       }
     }
 
+    // In the loops below, we maintain two "pointers" (indices really) as we
+    // walk through the old VNode's children and the new VNode's children.
+    // ```
+    // Old children:             New children:
+    // [<c1>, <c2>, <c3>]        [<c1’>, <c2’>, <c3’>, <c4’>]
+    //   ^- oldHead  ^- oldTail    ^- newHead           ^- newTail
+    // ```
+
+    // This loops advances from the left (low indices), as long as the old
+    // and new vnode have the same key.
     while (newHead <= newTail && oldHead <= oldTail) {
       if (
         (oldKey = getKey(oldVKids[oldHead])) == null ||
@@ -142,6 +152,8 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
       )
     }
 
+    // This loop advances from the right (high indices); once again, only as
+    // long as keys match.
     while (newHead <= newTail && oldHead <= oldTail) {
       if (
         (oldKey = getKey(oldVKids[oldTail])) == null ||
@@ -159,18 +171,28 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
       )
     }
 
+    // Did we finish processing the old children?
     if (oldHead > oldTail) {
+      // Create and insert nodes for the remaining new children.
       while (newHead <= newTail) {
+        // If `oldHead` is an *invalid* index, then `oldTail` never moved,
+        // and new children should be appended at the end. Otherwise, insert
+        // them before `oldHead`.
         node.insertBefore(
           createNode((newVKids[newHead] = vdomify(newVKids[newHead++])), isSvg),
           (oldVKid = oldVKids[oldHead]) && oldVKid.node
         )
       }
+    // Did we finish processing the new children?
     } else if (newHead > newTail) {
+      // Remove the nodes for any remaining old children.
       while (oldHead <= oldTail) {
         node.removeChild(oldVKids[oldHead++].node)
       }
     } else {
+      // There are both old and new children that are unprocessed.
+
+      // Put all old children that have the "key" attribute into `keyed`.
       for (var keyed = {}, newKeyed = {}, i = oldHead; i <= oldTail; i++) {
         if ((oldKey = oldVKids[i].key) != null) {
           keyed[oldKey] = oldVKids[i]
@@ -181,6 +203,7 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
         oldKey = getKey((oldVKid = oldVKids[oldHead]))
         newKey = getKey((newVKids[newHead] = vdomify(newVKids[newHead])))
 
+        // If we've already seen a new vnode with a matching key…
         if (
           newKeyed[oldKey] ||
           (newKey != null && newKey === getKey(oldVKids[oldHead + 1]))
@@ -239,6 +262,7 @@ var patchNode = (parent, node, oldVNode, newVNode, isSvg) => {
         }
       }
 
+      // Remove nodes for any keys that have disappeared.
       for (var i in keyed) {
         if (newKeyed[i] == null) {
           node.removeChild(keyed[i].node)

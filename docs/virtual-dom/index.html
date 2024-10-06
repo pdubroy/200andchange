@@ -63,16 +63,45 @@ for maximum flexibility.</em></p>
   <span class="hljs-variable constant_">TEXT_NODE</span> = <span class="hljs-number">3</span>,
   <span class="hljs-variable constant_">EMPTY_OBJ</span> = {},
   <span class="hljs-variable constant_">EMPTY_ARR</span> = [],
-  <span class="hljs-variable constant_">SVG_NS</span> = <span class="hljs-string">&quot;http://www.w3.org/2000/svg&quot;</span>
+  <span class="hljs-variable constant_">SVG_NS</span> = <span class="hljs-string">&quot;http://www.w3.org/2000/svg&quot;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-2">&#x00a7;</a>
+              </div>
+              <p>All events use this</p>
 
-<span class="hljs-keyword">var</span> listener = <span class="hljs-keyword">function</span> (<span class="hljs-params">event</span>) {
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> listener = <span class="hljs-keyword">function</span> (<span class="hljs-params">event</span>) {
   <span class="hljs-variable language_">this</span>.<span class="hljs-property">events</span>[event.<span class="hljs-property">type</span>](event)
 }
 
 <span class="hljs-keyword">var</span> <span class="hljs-title function_">getKey</span> = (<span class="hljs-params">vdom</span>) =&gt; (vdom == <span class="hljs-literal">null</span> ? vdom : vdom.<span class="hljs-property">key</span>)
 
-<span class="hljs-keyword">var</span> <span class="hljs-title function_">patchProperty</span> = (<span class="hljs-params">node, key, oldValue, newValue, isSvg</span>) =&gt; {
-  <span class="hljs-keyword">if</span> (key === <span class="hljs-string">&quot;key&quot;</span>) {
+<span class="hljs-keyword">var</span> <span class="hljs-title function_">patchProperty</span> = (<span class="hljs-params">node, key, oldValue, newValue, isSvg</span>) =&gt; {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-3">&#x00a7;</a>
+              </div>
+              <p>“key” is a not a real DOM attribute, it’s used in the diff algorithm,
+much like in React.
+See <a href="https://react.dev/learn/rendering-lists#why-does-react-need-keys">Why does React need keys?</a> for more details.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> (key === <span class="hljs-string">&quot;key&quot;</span>) {
   } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (key[<span class="hljs-number">0</span>] === <span class="hljs-string">&quot;o&quot;</span> &amp;&amp; key[<span class="hljs-number">1</span>] === <span class="hljs-string">&quot;n&quot;</span>) {
     <span class="hljs-keyword">if</span> (
       !((node.<span class="hljs-property">events</span> || (node.<span class="hljs-property">events</span> = {}))[(key = key.<span class="hljs-title function_">slice</span>(<span class="hljs-number">2</span>))] = newValue)
@@ -142,19 +171,82 @@ for maximum flexibility.</em></p>
       oldTail = oldVKids.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>,
       newTail = newVKids.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>
 
-    isSvg = isSvg || newVNode.<span class="hljs-property">tag</span> === <span class="hljs-string">&quot;svg&quot;</span>
+    isSvg = isSvg || newVNode.<span class="hljs-property">tag</span> === <span class="hljs-string">&quot;svg&quot;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-4">&#x00a7;</a>
+              </div>
+              <p>We include <code>oldProps</code> here because any key that is in <code>oldProps</code> but
+not in <code>newProps</code> needs to be restored to its original value.
+See the call to <code>node.removeAttribute</code> in <code>patchProperty</code>.</p>
 
-    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> { ...oldProps, ...newProps }) {
-      <span class="hljs-keyword">if</span> (
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> { ...oldProps, ...newProps }) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-5">&#x00a7;</a>
+              </div>
+              <p><strong>Optimization:</strong> skip patching if the values are the same.
+Some props can change through user interaction, so it’s not relevant
+what is in the old vnode, but rather what’s in the DOM.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> (
         (i === <span class="hljs-string">&quot;value&quot;</span> || i === <span class="hljs-string">&quot;selected&quot;</span> || i === <span class="hljs-string">&quot;checked&quot;</span>
           ? node[i]
           : oldProps[i]) !== newProps[i]
       ) {
         <span class="hljs-title function_">patchProperty</span>(node, i, oldProps[i], newProps[i], isSvg)
       }
-    }
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-6">&#x00a7;</a>
+              </div>
+              <p>In the loops below, we maintain two “pointers” (indices really) as we
+walk through the old VNode’s children and the new VNode’s children.</p>
+<pre><code><span class="hljs-title class_">Old</span> <span class="hljs-attr">children</span>:             <span class="hljs-title class_">New</span> <span class="hljs-attr">children</span>:
+[&lt;c1&gt;, &lt;c2&gt;, &lt;c3&gt;]        [&lt;c1’&gt;, &lt;c2’&gt;, &lt;c3’&gt;, &lt;c4’&gt;]
+  ^- oldHead  ^- oldTail    ^- newHead           ^- newTail
+</code></pre>
 
-    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-7">&#x00a7;</a>
+              </div>
+              <p>This loops advances from the left (low indices), as long as the old
+and new vnode have the same key.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
       <span class="hljs-keyword">if</span> (
         (oldKey = <span class="hljs-title function_">getKey</span>(oldVKids[oldHead])) == <span class="hljs-literal">null</span> ||
         oldKey !== <span class="hljs-title function_">getKey</span>(newVKids[newHead])
@@ -169,9 +261,23 @@ for maximum flexibility.</em></p>
         (newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead++])),
         isSvg
       )
-    }
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-8">&#x00a7;</a>
+              </div>
+              <p>This loop advances from the right (high indices); once again, only as
+long as keys match.</p>
 
-    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">while</span> (newHead &lt;= newTail &amp;&amp; oldHead &lt;= oldTail) {
       <span class="hljs-keyword">if</span> (
         (oldKey = <span class="hljs-title function_">getKey</span>(oldVKids[oldTail])) == <span class="hljs-literal">null</span> ||
         oldKey !== <span class="hljs-title function_">getKey</span>(newVKids[newTail])
@@ -186,21 +292,119 @@ for maximum flexibility.</em></p>
         (newVKids[newTail] = <span class="hljs-title function_">vdomify</span>(newVKids[newTail--])),
         isSvg
       )
-    }
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-9">&#x00a7;</a>
+              </div>
+              <p>Did we finish processing the old children?</p>
 
-    <span class="hljs-keyword">if</span> (oldHead &gt; oldTail) {
-      <span class="hljs-keyword">while</span> (newHead &lt;= newTail) {
-        node.<span class="hljs-title function_">insertBefore</span>(
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (oldHead &gt; oldTail) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-10">&#x00a7;</a>
+              </div>
+              <p>Create and insert nodes for the remaining new children.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">while</span> (newHead &lt;= newTail) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-11">&#x00a7;</a>
+              </div>
+              <p>If <code>oldHead</code> is an <em>invalid</em> index, then <code>oldTail</code> never moved,
+and new children should be appended at the end. Otherwise, insert
+them before <code>oldHead</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        node.<span class="hljs-title function_">insertBefore</span>(
           <span class="hljs-title function_">createNode</span>((newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead++])), isSvg),
           (oldVKid = oldVKids[oldHead]) &amp;&amp; oldVKid.<span class="hljs-property">node</span>
         )
-      }
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (newHead &gt; newTail) {
-      <span class="hljs-keyword">while</span> (oldHead &lt;= oldTail) {
+      }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-12">&#x00a7;</a>
+              </div>
+              <p>Did we finish processing the new children?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (newHead &gt; newTail) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-13">&#x00a7;</a>
+              </div>
+              <p>Remove the nodes for any remaining old children.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">while</span> (oldHead &lt;= oldTail) {
         node.<span class="hljs-title function_">removeChild</span>(oldVKids[oldHead++].<span class="hljs-property">node</span>)
       }
-    } <span class="hljs-keyword">else</span> {
-      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> keyed = {}, newKeyed = {}, i = oldHead; i &lt;= oldTail; i++) {
+    } <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-14">&#x00a7;</a>
+              </div>
+              <p>There are both old and new children that are unprocessed.</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-15">&#x00a7;</a>
+              </div>
+              <p>Put all old children that have the “key” attribute into <code>keyed</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> keyed = {}, newKeyed = {}, i = oldHead; i &lt;= oldTail; i++) {
         <span class="hljs-keyword">if</span> ((oldKey = oldVKids[i].<span class="hljs-property">key</span>) != <span class="hljs-literal">null</span>) {
           keyed[oldKey] = oldVKids[i]
         }
@@ -208,9 +412,22 @@ for maximum flexibility.</em></p>
 
       <span class="hljs-keyword">while</span> (newHead &lt;= newTail) {
         oldKey = <span class="hljs-title function_">getKey</span>((oldVKid = oldVKids[oldHead]))
-        newKey = <span class="hljs-title function_">getKey</span>((newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead])))
+        newKey = <span class="hljs-title function_">getKey</span>((newVKids[newHead] = <span class="hljs-title function_">vdomify</span>(newVKids[newHead])))</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-16">&#x00a7;</a>
+              </div>
+              <p>If we’ve already seen a new vnode with a matching key…</p>
 
-        <span class="hljs-keyword">if</span> (
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (
           newKeyed[oldKey] ||
           (newKey != <span class="hljs-literal">null</span> &amp;&amp; newKey === <span class="hljs-title function_">getKey</span>(oldVKids[oldHead + <span class="hljs-number">1</span>]))
         ) {
@@ -266,9 +483,22 @@ for maximum flexibility.</em></p>
         <span class="hljs-keyword">if</span> (<span class="hljs-title function_">getKey</span>((oldVKid = oldVKids[oldHead++])) == <span class="hljs-literal">null</span>) {
           node.<span class="hljs-title function_">removeChild</span>(oldVKid.<span class="hljs-property">node</span>)
         }
-      }
+      }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-17">&#x00a7;</a>
+              </div>
+              <p>Remove nodes for any keys that have disappeared.</p>
 
-      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> keyed) {
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i <span class="hljs-keyword">in</span> keyed) {
         <span class="hljs-keyword">if</span> (newKeyed[i] == <span class="hljs-literal">null</span>) {
           node.<span class="hljs-title function_">removeChild</span>(keyed[i].<span class="hljs-property">node</span>)
         }
