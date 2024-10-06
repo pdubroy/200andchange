@@ -4,7 +4,7 @@
 # to Python.
 #
 # **License:** [MIT](https://github.com/tekknolagi/db.py/blob/aab4c84ae78b5a3f652271b079f7c9fdbc12ed9e/LICENSE)<br>
-# **Copyright:** (c) 2024 Maxwell Bernstein
+# **Copyright:** (c) 2024 [Maxwell Bernstein](https://bernsteinbear.com)
 
 
 class Table:
