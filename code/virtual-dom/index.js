@@ -1,4 +1,25 @@
-// https://github.com/jorgebucaran/superfine/blob/145ab11d70e94619e593f63139e218fa73d1b291/index.js
+// # Virtual DOM
+//
+// This is an implementation of a [virtual DOM][], as seen in libraries like
+// [React][].
+//
+// [virtual DOM]: https://en.wikipedia.org/wiki/Virtual_DOM
+// [React]: https://reactjs.org/
+//
+// It comes from [Superfine][] ([145ab11][]) by Jorge Bucaran:
+//
+// _Superfine is a minimal view layer for building web interfaces. Think
+// [Hyperapp][] without the framework—no state machines, effects, or
+// subscriptions—just the absolute bare minimum (1 kB minified+gzipped).
+// Mix it with your favorite state management library or use it standalone
+// for maximum flexibility._
+//
+// [Superfine]: https://github.com/jorgebucaran/superfine/
+// [Hyperapp]: https://github.com/jorgebucaran/hyperapp
+// [145ab11]: https://github.com/jorgebucaran/superfine/blob/145ab11d70e94619e593f63139e218fa73d1b291/index.js
+//
+// **License:** [MIT](https://github.com/jorgebucaran/superfine/blob/145ab11d70e94619e593f63139e218fa73d1b291/LICENSE.md)<br>
+// **Copyright:** © 2018 [Jorge Bucaran](https://jorgebucaran.com)
 
 var SSR_NODE = 1,
   TEXT_NODE = 3,
