@@ -6,7 +6,7 @@
     "remark-html": "^16.0.1"
   },
   "scripts": {
-    "docco": "find . -name '*.js' ! -path './node_modules/*' ! -path './scripts/*' | xargs docco",
+    "docco": "find . \\( -name '*.js' -o -name '*.py' \\) ! -path './node_modules/*' ! -path './scripts/*' | xargs docco",
     "gen-site": "npm run docco && node _scripts/generateIndex.mjs > docs/index.html"
   }
 }

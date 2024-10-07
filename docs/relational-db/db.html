@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>A relational database query engine in Python</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="../packrat-parsing/index.html">
+                  ./packrat-parsing/index.js
+                </a>
+              
+                
+                <a class="source" href="db.html">
+                  ./relational-db/db.py
+                </a>
+              
+                
+                <a class="source" href="../virtual-dom/index.html">
+                  ./virtual-dom/index.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-1">&#x00a7;</a>
+              </div>
+              <h1 id="a-relational-database-query-engine-in-python">A relational database query engine in Python</h1>
+<p>This is a medium-faithful port of <a href="https://github.com/weinberg/SQLToy">SQLToy</a>
+to Python.</p>
+<p><strong>License:</strong> <a href="https://github.com/tekknolagi/db.py/blob/aab4c84ae78b5a3f652271b079f7c9fdbc12ed9e/LICENSE">MIT</a><br>
+<strong>Copyright:</strong> (c) 2024 Maxwell Bernstein</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Table</span>:
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, name: <span class="hljs-built_in">str</span>, rows: <span class="hljs-built_in">tuple</span>[<span class="hljs-built_in">dict</span>] = (<span class="hljs-params"></span>)</span>):
+        self.name = name
+        self.rows = <span class="hljs-built_in">tuple</span>(rows)
+        self._colnames = ()
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">set_colnames</span>(<span class="hljs-params">self, colnames</span>):
+        self._colnames = <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(colnames))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">colnames</span>(<span class="hljs-params">self</span>):
+        <span class="hljs-keyword">if</span> self._colnames:
+            <span class="hljs-keyword">return</span> self._colnames
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> self.rows:
+            <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">&quot;Need either rows or manually specified column names&quot;</span>)
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(self.rows[<span class="hljs-number">0</span>].keys()))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">filter</span>(<span class="hljs-params">self, pred</span>):
+        <span class="hljs-keyword">return</span> Table(self.name, [row <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> self.rows <span class="hljs-keyword">if</span> pred(row)])
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__repr__</span>(<span class="hljs-params">self</span>):
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> self.name:
+            <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Table(<span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.rows)!r}</span>)&quot;</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Table(<span class="hljs-subst">{self.name!r}</span>, <span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.rows)!r}</span>)&quot;</span>
+
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Database</span>:
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self</span>):
+        self.tables = {}
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">CREATE_TABLE</span>(<span class="hljs-params">self, name, colnames=(<span class="hljs-params"></span>)</span>):
+        table = Table(name)
+        <span class="hljs-keyword">if</span> colnames:
+            table.set_colnames(colnames)
+        self.tables[name] = table
+        <span class="hljs-keyword">return</span> table
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">DROP_TABLE</span>(<span class="hljs-params">self, name</span>):
+        <span class="hljs-keyword">del</span> self.tables[name]
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">FROM</span>(<span class="hljs-params">self, first_table, *rest</span>):
+        match rest:
+            case ():
+                <span class="hljs-keyword">return</span> self.tables[first_table]
+            case _:
+                <span class="hljs-keyword">return</span> self.CROSS_JOIN(self.tables[first_table], self.FROM(*rest))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">SELECT</span>(<span class="hljs-params">self, table, columns, aliases=<span class="hljs-literal">None</span></span>):
+        <span class="hljs-keyword">if</span> aliases <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:
+            aliases = {}
+        <span class="hljs-keyword">return</span> Table(
+            table.name,
+            [
+                {aliases.get(col, col): row[col] <span class="hljs-keyword">for</span> col <span class="hljs-keyword">in</span> columns}
+                <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> table.rows
+            ],
+        )
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">WHERE</span>(<span class="hljs-params">self, table, pred</span>):
+        <span class="hljs-keyword">return</span> table.<span class="hljs-built_in">filter</span>(pred)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">INSERT_INTO</span>(<span class="hljs-params">self, table_name, rows</span>):
+        table = self.tables[table_name]
+        table.rows = (*table.rows, *rows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">UPDATE</span>(<span class="hljs-params">self, table, <span class="hljs-built_in">set</span>, pred=<span class="hljs-keyword">lambda</span> _: <span class="hljs-literal">True</span></span>):
+        <span class="hljs-keyword">return</span> Table(
+            table.name, [{**row, **<span class="hljs-built_in">set</span>} <span class="hljs-keyword">if</span> pred(row) <span class="hljs-keyword">else</span> row <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> table.rows]
+        )
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">CROSS_JOIN</span>(<span class="hljs-params">self, a, b</span>):
+        rows = []
+        a_prefix = <span class="hljs-string">f&quot;<span class="hljs-subst">{a.name}</span>.&quot;</span> <span class="hljs-keyword">if</span> a.name <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;&quot;</span>
+        b_prefix = <span class="hljs-string">f&quot;<span class="hljs-subst">{b.name}</span>.&quot;</span> <span class="hljs-keyword">if</span> b.name <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;&quot;</span>
+        <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> a.rows:
+            <span class="hljs-keyword">for</span> y <span class="hljs-keyword">in</span> b.rows:
+                rows.append(
+                    {
+                        **{<span class="hljs-string">f&quot;<span class="hljs-subst">{a_prefix}</span><span class="hljs-subst">{k}</span>&quot;</span>: x[k] <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> a.colnames()},
+                        **{<span class="hljs-string">f&quot;<span class="hljs-subst">{b_prefix}</span><span class="hljs-subst">{k}</span>&quot;</span>: y[k] <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> b.colnames()},
+                    }
+                )
+        <span class="hljs-keyword">return</span> Table(<span class="hljs-string">&quot;&quot;</span>, rows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">INNER_JOIN</span>(<span class="hljs-params">self, a, b, pred</span>):
+        <span class="hljs-keyword">return</span> self.CROSS_JOIN(a, b).<span class="hljs-built_in">filter</span>(pred)
+
+    JOIN = INNER_JOIN
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">LEFT_JOIN</span>(<span class="hljs-params">self, a, b, pred</span>):
+        rows = []
+        empty_b_row = {<span class="hljs-string">f&quot;<span class="hljs-subst">{b.name}</span>.<span class="hljs-subst">{k}</span>&quot;</span>: <span class="hljs-literal">None</span> <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> b.colnames()}
+        <span class="hljs-keyword">for</span> a_row <span class="hljs-keyword">in</span> a.rows:
+            added = <span class="hljs-literal">False</span>
+            mangled_a_row = {<span class="hljs-string">f&quot;<span class="hljs-subst">{a.name}</span>.<span class="hljs-subst">{k}</span>&quot;</span>: a_row[k] <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> a.colnames()}
+            <span class="hljs-keyword">for</span> b_row <span class="hljs-keyword">in</span> b.rows:
+                row = {
+                    **mangled_a_row,
+                    **{<span class="hljs-string">f&quot;<span class="hljs-subst">{b.name}</span>.<span class="hljs-subst">{k}</span>&quot;</span>: b_row[k] <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> b.colnames()},
+                }
+                <span class="hljs-keyword">if</span> pred(row):
+                    rows.append(row)
+                    added = <span class="hljs-literal">True</span>
+            <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> added:
+                rows.append({**mangled_a_row, **empty_b_row})
+        <span class="hljs-keyword">return</span> Table(<span class="hljs-string">&quot;&quot;</span>, rows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">RIGHT_JOIN</span>(<span class="hljs-params">self, a, b, pred</span>):
+        <span class="hljs-keyword">return</span> self.LEFT_JOIN(b, a, pred)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">LIMIT</span>(<span class="hljs-params">self, table, limit</span>):
+        <span class="hljs-keyword">return</span> Table(table.name, table.rows[:limit])
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">ORDER_BY</span>(<span class="hljs-params">self, table, rel</span>):</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-2">&#x00a7;</a>
+              </div>
+              <p>Differs from JS version by passing the whole row to the comparator</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">return</span> Table(table.name, <span class="hljs-built_in">sorted</span>(table.rows, key=rel))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">HAVING</span>(<span class="hljs-params">self, table, pred</span>):
+        <span class="hljs-keyword">return</span> table.<span class="hljs-built_in">filter</span>(pred)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">OFFSET</span>(<span class="hljs-params">self, table, offset</span>):
+        <span class="hljs-keyword">return</span> Table(table.name, table.rows[offset:])
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">DISTINCT</span>(<span class="hljs-params">self, table, columns</span>):
+        seen = <span class="hljs-built_in">set</span>()
+        rows = []
+        <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> table.rows:
+            view = <span class="hljs-built_in">tuple</span>((col, row[col]) <span class="hljs-keyword">for</span> col <span class="hljs-keyword">in</span> columns)
+            <span class="hljs-keyword">if</span> view <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> seen:
+                seen.add(view)
+                rows.append(<span class="hljs-built_in">dict</span>(view))
+        <span class="hljs-keyword">return</span> Table(table.name, rows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">GROUP_BY</span>(<span class="hljs-params">self, table, groupBys</span>):
+        groupRows = {}
+        <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> table.rows:
+            key = <span class="hljs-built_in">tuple</span>(row[col] <span class="hljs-keyword">for</span> col <span class="hljs-keyword">in</span> groupBys)
+            <span class="hljs-keyword">if</span> key <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> groupRows:
+                groupRows[key] = []
+            groupRows[key].append(row.copy())
+        resultRows = []
+        <span class="hljs-keyword">for</span> group <span class="hljs-keyword">in</span> groupRows.values():
+            resultRow = {<span class="hljs-string">&quot;_groupRows&quot;</span>: group}
+            <span class="hljs-keyword">for</span> col <span class="hljs-keyword">in</span> groupBys:
+                resultRow[col] = group[<span class="hljs-number">0</span>][col]
+            resultRows.append(resultRow)
+        <span class="hljs-keyword">return</span> Table(table.name, resultRows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">_aggregate</span>(<span class="hljs-params">self, table, col, agg_name, agg</span>):
+        grouped = table.rows <span class="hljs-keyword">and</span> <span class="hljs-string">&quot;_groupRows&quot;</span> <span class="hljs-keyword">in</span> table.rows[<span class="hljs-number">0</span>]
+        col_name = <span class="hljs-string">f&quot;<span class="hljs-subst">{agg_name}</span>(<span class="hljs-subst">{col}</span>)&quot;</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> grouped:
+            <span class="hljs-keyword">return</span> Table(table.name, [{col_name: agg(table.rows)}])
+        rows = []
+        <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> table.rows:
+            new_row = {}
+            <span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">in</span> row.items():
+                <span class="hljs-keyword">if</span> key == <span class="hljs-string">&quot;_groupRows&quot;</span>:
+                    new_row[col_name] = agg(value)
+                <span class="hljs-keyword">else</span>:
+                    new_row[key] = value
+            rows.append(new_row)
+        <span class="hljs-keyword">return</span> Table(table.name, rows)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">COUNT</span>(<span class="hljs-params">self, table, col</span>):
+        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;COUNT&quot;</span>, <span class="hljs-built_in">len</span>)
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">MAX</span>(<span class="hljs-params">self, table, col</span>):
+        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;MAX&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">max</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">SUM</span>(<span class="hljs-params">self, table, col</span>):
+        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;SUM&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">sum</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
+
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__repr__</span>(<span class="hljs-params">self</span>):
+        <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Database(<span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.tables.keys())!r}</span>)&quot;</span></pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
