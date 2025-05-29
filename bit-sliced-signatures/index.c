@@ -19,7 +19,9 @@
 //
 // Built as `cc -O2 -std=c11 -pedantic -Wall -o search-index index.c`.
 //
-// **License:** This software belongs to a future without copyright.  Please use it however you'd like.<br>
+// This software belongs to a future without copyright.  Please use it however you'd like.
+//
+// **License:** [CC0](./LICENSE.md) (public domain dedication).
 // **Authorship:** [Ian Henderson](http://ianhenderson.org/), May 2025
 
 #define _GNU_SOURCE
