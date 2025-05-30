@@ -3,6 +3,18 @@
 # **License:** MIT
 # **Copyright:** (c) 2025 [Maxwell Bernstein](https://bernsteinbear.com)
 
+# This parser has two main functions, `tokenize` and `parse`. `tokenize` turns
+# a string into a list of Python objects---tokens. `tokenize("1+2+3")` gives you
+# `[1, "+", 2, "+", 3]` and so on. The parser turns this unstructured list into
+# recursive and structured abstract syntax trees. To reduce code size, these
+# also look like lists, but they are nested: `parse(tokenize("1+2+3"))` gives
+# you `["+", 1, ["+", 2, 3]]`. This indicates that the `2+3` is grouped and
+# then added to `1` after.
+#
+# Precedence climbing can be used standalone or used inside of a recursive
+# descent parser that handles other language constructs such as variable binding
+# and function definitions.
+
 # A list of operators in groups of increasing precedence (tighter binding
 # power). It doesn't matter exactly what the precedence is, just that each
 # entry within a group has the same precedence (+ and -, etc) and that each

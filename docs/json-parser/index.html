@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>A JSON parser in Haskell</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="../bit-sliced-signatures/index.html">
+                  ./bit-sliced-signatures/index.c
+                </a>
+              
+                
+                <a class="source" href="index.html">
+                  ./json-parser/index.hs
+                </a>
+              
+                
+                <a class="source" href="../just-in-time/index.html">
+                  ./just-in-time/index.py
+                </a>
+              
+                
+                <a class="source" href="../packrat-parsing/index.html">
+                  ./packrat-parsing/index.js
+                </a>
+              
+                
+                <a class="source" href="../precedence-climbing/index.html">
+                  ./precedence-climbing/index.py
+                </a>
+              
+                
+                <a class="source" href="../relational-db/index.html">
+                  ./relational-db/index.py
+                </a>
+              
+                
+                <a class="source" href="../virtual-dom/index.html">
+                  ./virtual-dom/index.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-1">&#x00a7;</a>
+              </div>
+              <h1 id="a-json-parser-in-haskell">A JSON parser in Haskell</h1>
+<p><strong>License:</strong> MIT</p>
+<p><strong>Copyright:</strong> (c) 2025 <a href="https://abhinavsarkar.net">Abhinav Sarkar</a>, Google</p>
+<p>This is a <a href="https://en.wikipedia.org/wiki/JSON">JSON</a> parser written from scratch in <a href="https://www.haskell.org/">Haskell</a>
+in under 200 lines. It complies with the JSON language specification set out in <a href="https://tools.ietf.org/html/rfc8259">IETF RFC 8259</a>,
+and passes the comprehensive <a href="https://github.com/nst/JSONTestSuite">JSON test suite</a>.</p>
+<p>It is a recursive-descent parser, written in <a href="https://en.wikipedia.org/wiki/Parser_combinator">Parser combinator</a>
+style.</p>
+<p>Compile it with <a href="https://www.haskell.org/ghc/">GHC</a> by running:</p>
+<pre><code class="language-shell">ghc --make *.hs -main-is JSONParser -o jsonparser
+</code></pre>
+<p>This parser has been extracted and simplified from Abhinav’s blog post
+<a href="https://abhinavsarkar.net/posts/json-parsing-from-scratch-in-haskell/">JSON Parsing from Scratch in Haskell</a>.</p>
+<hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-2">&#x00a7;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">module</span> JSONParser <span class="hljs-keyword">where</span>
+
+<span class="hljs-keyword">import</span> Control.Applicative (<span class="hljs-type">Alternative</span> (..), optional)
+<span class="hljs-keyword">import</span> Control.Monad (<span class="hljs-title">replicateM</span>)
+<span class="hljs-keyword">import</span> Data.Bits (<span class="hljs-title">shiftL</span>)
+<span class="hljs-keyword">import</span> Data.Char (<span class="hljs-title">chr</span>, <span class="hljs-title">digitToInt</span>, <span class="hljs-title">isDigit</span>, <span class="hljs-title">isHexDigit</span>, <span class="hljs-title">ord</span>)
+<span class="hljs-keyword">import</span> Data.Functor (($&gt;))
+<span class="hljs-keyword">import</span> System.Exit (<span class="hljs-title">exitFailure</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-3">&#x00a7;</a>
+              </div>
+              <p>The data type for representing a JSON value in Haskell.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">data</span> <span class="hljs-type">JValue</span></span>
+  =</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-4">&#x00a7;</a>
+              </div>
+              <p>Null, a null value.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-type">JNull</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-5">&#x00a7;</a>
+              </div>
+              <p>Boolean, a boolean value.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  | <span class="hljs-type">JBool</span> <span class="hljs-type">Bool</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-6">&#x00a7;</a>
+              </div>
+              <p>String, a string value, a sequence of zero or more Unicode characters.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  | <span class="hljs-type">JString</span> <span class="hljs-type">String</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-7">&#x00a7;</a>
+              </div>
+              <p>Number, a numeric value representing integral and real numbers with support for scientific notation.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  | <span class="hljs-type">JNumber</span> {int :: <span class="hljs-type">Integer</span>, frac :: [<span class="hljs-type">Int</span>], exponent :: <span class="hljs-type">Integer</span>}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-8">&#x00a7;</a>
+              </div>
+              <p>Array, an ordered list of values.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  | <span class="hljs-type">JArray</span> [<span class="hljs-type">JValue</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-9">&#x00a7;</a>
+              </div>
+              <p>Object, a collection of name-value pairs.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  | <span class="hljs-type">JObject</span> [(<span class="hljs-type">String</span>, <span class="hljs-type">JValue</span>)]
+  <span class="hljs-keyword">deriving</span> (<span class="hljs-type">Eq</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-10">&#x00a7;</a>
+              </div>
+              <p>A generic parser type. It takes some input <code>i</code>, reads some part of it, and optionally parses it into some
+relevant data structure <code>o</code> and the rest of the input <code>i</code> to be potentially parsed later. It may fail as well.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">newtype</span> <span class="hljs-type">Parser</span> i o = <span class="hljs-type">Parser</span> {<span class="hljs-title">runParser</span> :: <span class="hljs-title">i</span> -&gt; <span class="hljs-type">Maybe</span> (<span class="hljs-title">i</span>, <span class="hljs-title">o</span>)}</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-11">&#x00a7;</a>
+              </div>
+              <p>A <code>Parser</code> is a <a href="https://hackage.haskell.org/package/base/docs/Data-Functor.html#t:Functor"><code>Functor</code></a>.
+This allows us to modify the result of a parser without changing the structure of the result (a parse success stays
+a success, and a failure stays a failure).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">instance</span> <span class="hljs-type">Functor</span> (<span class="hljs-type">Parser</span> <span class="hljs-title">i</span>) <span class="hljs-keyword">where</span></span>
+  fmap f parser = <span class="hljs-type">Parser</span> $ fmap (fmap f) . runParser parser</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-12">&#x00a7;</a>
+              </div>
+              <p>A <code>Parser</code> is an <a href="https://hackage.haskell.org/package/base/docs/Control-Applicative.html#t:Applicative"><code>Applicative</code></a>.
+This allows us to combine the results of two parsers that are independent of each-other.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">instance</span> <span class="hljs-type">Applicative</span> (<span class="hljs-type">Parser</span> <span class="hljs-title">i</span>) <span class="hljs-keyword">where</span></span>
+  pure x = <span class="hljs-type">Parser</span> $ pure . (,x)
+  pf &lt;*&gt; po = <span class="hljs-type">Parser</span> $ \input -&gt; <span class="hljs-keyword">case</span> runParser pf input <span class="hljs-keyword">of</span>
+    <span class="hljs-type">Nothing</span> -&gt; <span class="hljs-type">Nothing</span>
+    <span class="hljs-type">Just</span> (rest, f) -&gt; fmap f &lt;$&gt; runParser po rest</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-13">&#x00a7;</a>
+              </div>
+              <p>A <code>Parser</code> is an <a href="https://hackage.haskell.org/package/base/docs/Control-Applicative.html#t:Alternative"><code>Alternative</code></a>.
+This allows us to fallback upon a second parser in case our first parser fails.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">instance</span> <span class="hljs-type">Alternative</span> (<span class="hljs-type">Parser</span> <span class="hljs-title">i</span>) <span class="hljs-keyword">where</span></span>
+  empty = <span class="hljs-type">Parser</span> $ const empty
+  p1 &lt;|&gt; p2 = <span class="hljs-type">Parser</span> $ \input -&gt; runParser p1 input &lt;|&gt; runParser p2 input</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-14">&#x00a7;</a>
+              </div>
+              <p>A <code>Parser</code> is <a href="https://hackage.haskell.org/package/base/docs/Control-Monad.html#t:Monad"><code>Monad</code></a>.
+This allows us to combine the results of two parsers sequentially, such that one parser is
+dependent on the result of other.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">instance</span> <span class="hljs-type">Monad</span> (<span class="hljs-type">Parser</span> <span class="hljs-title">i</span>) <span class="hljs-keyword">where</span></span>
+  p &gt;&gt;= f = <span class="hljs-type">Parser</span> $ \input -&gt; <span class="hljs-keyword">case</span> runParser p input <span class="hljs-keyword">of</span>
+    <span class="hljs-type">Nothing</span> -&gt; <span class="hljs-type">Nothing</span>
+    <span class="hljs-type">Just</span> (rest, o) -&gt; runParser (f o) rest</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-15">&#x00a7;</a>
+              </div>
+              <p>A parser that succeeds if the first element of its input list matches the given predicate.
+Returns the matching element on success.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">satisfy</span> :: (a -&gt; <span class="hljs-type">Bool</span>) -&gt; <span class="hljs-type">Parser</span> [a] a
+<span class="hljs-title">satisfy</span> predicate = <span class="hljs-type">Parser</span> $ \input -&gt; <span class="hljs-keyword">case</span> input <span class="hljs-keyword">of</span>
+  (x : xs) | predicate x -&gt; <span class="hljs-type">Just</span> (xs, x)
+  _ -&gt; <span class="hljs-type">Nothing</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-16">&#x00a7;</a>
+              </div>
+              <p>A parser that matches the first character of its input string with a given character.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">char</span> :: <span class="hljs-type">Char</span> -&gt; <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">Char</span>
+<span class="hljs-title">char</span> c = satisfy (== c)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-17">&#x00a7;</a>
+              </div>
+              <p>A parser that succeeds if the first character of its input string is a digit (0–9).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">digit</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">Int</span>
+<span class="hljs-title">digit</span> = digitToInt &lt;$&gt; satisfy isDigit</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-18">&#x00a7;</a>
+              </div>
+              <p>A parser that matches its input string with a given string.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">string</span> :: <span class="hljs-type">String</span> -&gt; <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">String</span>
+<span class="hljs-title">string</span> <span class="hljs-string">&quot;&quot;</span> = pure <span class="hljs-string">&quot;&quot;</span>
+<span class="hljs-title">string</span> (c : cs) = (:) &lt;$&gt; char c &lt;*&gt; string cs</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-19">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON <code>null</code> value that matches the string “null”, and returns the <code>JNull</code> value on
+success.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jNull</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jNull</span> = string <span class="hljs-string">&quot;null&quot;</span> $&gt; <span class="hljs-type">JNull</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-20">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON boolean values that matches the strings “true” or “false”, and returns the
+corresponding <code>JBool</code> value on success.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jBool</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jBool</span> =
+  string <span class="hljs-string">&quot;true&quot;</span> $&gt; <span class="hljs-type">JBool</span> <span class="hljs-type">True</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;false&quot;</span> $&gt; <span class="hljs-type">JBool</span> <span class="hljs-type">False</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-21">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON characters that matches ASCII characters, as well as, escaped sequences
+for characters defined in the JSON spec, and Unicode characters with <code>\u</code> prefix and their hex-digit codes.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jsonChar</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">Char</span>
+<span class="hljs-title">jsonChar</span> =
+  string <span class="hljs-string">&quot;\\\&quot;&quot;</span> $&gt; <span class="hljs-string">&#x27;&quot;&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\\\&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\\</span>&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\/&quot;</span> $&gt; <span class="hljs-string">&#x27;/&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\b&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\b</span>&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\f&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\f</span>&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\n&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\n</span>&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\r&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\r</span>&#x27;</span>
+  &lt;|&gt; string <span class="hljs-string">&quot;\\t&quot;</span> $&gt; <span class="hljs-string">&#x27;<span class="hljs-char escape_">\t</span>&#x27;</span>
+  &lt;|&gt; unicodeChar
+  &lt;|&gt; satisfy (\c -&gt; not (c == <span class="hljs-string">&#x27;<span class="hljs-char escape_">\&quot;</span>&#x27;</span> || c == <span class="hljs-string">&#x27;<span class="hljs-char escape_">\\</span>&#x27;</span> || isControl c))
+  <span class="hljs-keyword">where</span>
+    unicodeChar =
+      chr . fromIntegral . digitsToNumber <span class="hljs-number">16</span> <span class="hljs-number">0</span>
+        &lt;$&gt; (string <span class="hljs-string">&quot;\\u&quot;</span> *&gt; replicateM <span class="hljs-number">4</span> hexDigit)
+
+    hexDigit = digitToInt &lt;$&gt; satisfy isHexDigit
+
+    isControl c = c `elem` [<span class="hljs-string">&#x27;<span class="hljs-char escape_">\0</span>&#x27;</span> .. &#x27;\<span class="hljs-number">31</span>&#x27;]
+
+<span class="hljs-title">digitsToNumber</span> :: <span class="hljs-type">Int</span> -&gt; <span class="hljs-type">Integer</span> -&gt; [<span class="hljs-type">Int</span>] -&gt; <span class="hljs-type">Integer</span>
+<span class="hljs-title">digitsToNumber</span> base =
+  foldl (\num d -&gt; num * fromIntegral base + fromIntegral d)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-22">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON strings that takes care of correctly parsing <a href="https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF">UTF-16 surrogate pairs</a>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jString</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jString</span> = <span class="hljs-type">JString</span> &lt;$&gt; (char <span class="hljs-string">&#x27;&quot;&#x27;</span> *&gt; jString&#x27;)
+  <span class="hljs-keyword">where</span>
+    jString&#x27; = <span class="hljs-keyword">do</span>
+      optFirst &lt;- optional jsonChar
+      <span class="hljs-keyword">case</span> optFirst <span class="hljs-keyword">of</span>
+        <span class="hljs-type">Nothing</span> -&gt; char <span class="hljs-string">&#x27;&quot;&#x27;</span> $&gt; <span class="hljs-string">&quot;&quot;</span>
+        <span class="hljs-type">Just</span> first | not (isSurrogate first) -&gt; (first :) &lt;$&gt; jString&#x27;
+        <span class="hljs-type">Just</span> first -&gt; <span class="hljs-keyword">do</span>
+          second &lt;- jsonChar
+          <span class="hljs-keyword">if</span> isHighSurrogate first &amp;&amp; isLowSurrogate second
+            <span class="hljs-keyword">then</span> (combineSurrogates first second :) &lt;$&gt; jString&#x27;
+            <span class="hljs-keyword">else</span> empty
+
+    isHighSurrogate a =
+      ord a &gt;= highSurrogateLowerBound &amp;&amp; ord a &lt;= highSurrogateUpperBound
+    isLowSurrogate a =
+      ord a &gt;= lowSurrogateLowerBound &amp;&amp; ord a &lt;= lowSurrogateUpperBound
+    isSurrogate a = isHighSurrogate a || isLowSurrogate a
+
+    combineSurrogates a b =
+      chr $
+        ((ord a - highSurrogateLowerBound) `shiftL` <span class="hljs-number">10</span>)
+          + (ord b - lowSurrogateLowerBound)
+          + <span class="hljs-number">0x10000</span>
+
+    highSurrogateLowerBound = <span class="hljs-number">0xD800</span>
+    highSurrogateUpperBound = <span class="hljs-number">0xDBFF</span>
+    lowSurrogateLowerBound = <span class="hljs-number">0xDC00</span>
+    lowSurrogateUpperBound = <span class="hljs-number">0xDFFF</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-23">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON numbers in integer, decimal or scientific notation formats.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jNumber</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jNumber</span> = jIntFracExp &lt;|&gt; jIntExp &lt;|&gt; jIntFrac &lt;|&gt; jInt
+  <span class="hljs-keyword">where</span>
+    jInt = <span class="hljs-type">JNumber</span> &lt;$&gt; jInt&#x27; &lt;*&gt; pure [] &lt;*&gt; pure <span class="hljs-number">0</span>
+    jIntExp = <span class="hljs-type">JNumber</span> &lt;$&gt; jInt&#x27; &lt;*&gt; pure [] &lt;*&gt; jExp
+    jIntFrac = (\i f -&gt; <span class="hljs-type">JNumber</span> i f <span class="hljs-number">0</span>) &lt;$&gt; jInt&#x27; &lt;*&gt; jFrac
+    jIntFracExp = (\ ~(<span class="hljs-type">JNumber</span> i f _) e -&gt; <span class="hljs-type">JNumber</span> i f e) &lt;$&gt; jIntFrac &lt;*&gt; jExp
+
+    jInt&#x27; = signInt &lt;$&gt; optional (char <span class="hljs-string">&#x27;-&#x27;</span>) &lt;*&gt; jUInt
+    jUInt =
+      (\d ds -&gt; digitsToNumber <span class="hljs-number">10</span> <span class="hljs-number">0</span> (d : ds)) &lt;$&gt; digit19 &lt;*&gt; digits
+      &lt;|&gt; fromIntegral &lt;$&gt; digit
+
+    jFrac = char <span class="hljs-string">&#x27;.&#x27;</span> *&gt; digits
+    jExp =
+      (char <span class="hljs-string">&#x27;e&#x27;</span> &lt;|&gt; char <span class="hljs-string">&#x27;E&#x27;</span>)
+        *&gt; (signInt &lt;$&gt; optional (char <span class="hljs-string">&#x27;+&#x27;</span> &lt;|&gt; char <span class="hljs-string">&#x27;-&#x27;</span>) &lt;*&gt; jUInt)
+
+    digit19 = digitToInt &lt;$&gt; satisfy (\x -&gt; isDigit x &amp;&amp; x /= <span class="hljs-string">&#x27;0&#x27;</span>)
+    digits = some digit
+
+    signInt (<span class="hljs-type">Just</span> <span class="hljs-string">&#x27;-&#x27;</span>) i = negate i
+    signInt _ i = i</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-24">&#x00a7;</a>
+              </div>
+              <p>Some handy parser combinators.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">surroundedBy</span> :: <span class="hljs-type">Parser</span> i a -&gt; <span class="hljs-type">Parser</span> i b -&gt; <span class="hljs-type">Parser</span> i a
+<span class="hljs-title">surroundedBy</span> p1 p2 = p2 *&gt; p1 &lt;* p2
+
+<span class="hljs-title">separatedBy</span> :: <span class="hljs-type">Parser</span> i v -&gt; <span class="hljs-type">Parser</span> i s -&gt; <span class="hljs-type">Parser</span> i [v]
+<span class="hljs-title">separatedBy</span> v s =
+  (:) &lt;$&gt; v &lt;*&gt; many (s *&gt; v)
+  &lt;|&gt; pure []
+
+<span class="hljs-title">between</span> :: <span class="hljs-type">Parser</span> i a -&gt; <span class="hljs-type">Parser</span> i a -&gt; <span class="hljs-type">Parser</span> i b -&gt; <span class="hljs-type">Parser</span> i b
+<span class="hljs-title">between</span> pl pr p = pl *&gt; p &lt;* pr
+
+<span class="hljs-title">spaces</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">String</span>
+<span class="hljs-title">spaces</span> = many (char <span class="hljs-string">&#x27; &#x27;</span> &lt;|&gt; char <span class="hljs-string">&#x27;<span class="hljs-char escape_">\n</span>&#x27;</span> &lt;|&gt; char <span class="hljs-string">&#x27;<span class="hljs-char escape_">\r</span>&#x27;</span> &lt;|&gt; char <span class="hljs-string">&#x27;<span class="hljs-char escape_">\t</span>&#x27;</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-25">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON arrays, containing zero or more items of any JSON types separated by commas.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jArray</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jArray</span> = fmap <span class="hljs-type">JArray</span>
+  $ between (char <span class="hljs-string">&#x27;[&#x27;</span>) (char <span class="hljs-string">&#x27;]&#x27;</span>)
+  $ jValue `separatedBy` char <span class="hljs-string">&#x27;,&#x27;</span> `surroundedBy` spaces</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-26">&#x00a7;</a>
+              </div>
+              <p>The parser for JSON objects, containing  zero or more key-value pairs separated by colon, where
+keys are JSON strings, and values are any JSON types.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jObject</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jObject</span> = fmap <span class="hljs-type">JObject</span>
+  $ between (char <span class="hljs-string">&#x27;{&#x27;</span>) ( char <span class="hljs-string">&#x27;}&#x27;</span>)
+  $ pair `separatedBy` char <span class="hljs-string">&#x27;,&#x27;</span> `surroundedBy` spaces
+  <span class="hljs-keyword">where</span>
+    pair =
+      (\ ~(<span class="hljs-type">JString</span> s) j -&gt; (s, j))
+        &lt;$&gt; (jString `surroundedBy` spaces)
+        &lt;* char <span class="hljs-string">&#x27;:&#x27;</span>
+        &lt;*&gt; jValue</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-27">&#x00a7;</a>
+              </div>
+              <p>The parser for any JSON value, created by combining all the previous JSON parsers.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">jValue</span> :: <span class="hljs-type">Parser</span> <span class="hljs-type">String</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">jValue</span> = jValue&#x27; `surroundedBy` spaces
+  <span class="hljs-keyword">where</span>
+    jValue&#x27; =
+      jNull
+        &lt;|&gt; jBool
+        &lt;|&gt; jString
+        &lt;|&gt; jNumber
+        &lt;|&gt; jArray
+        &lt;|&gt; jObject</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-28">&#x00a7;</a>
+              </div>
+              <p><code>parseJSON</code> parses its input string as a JSON value, or fails on parsing errors.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">parseJSON</span> :: <span class="hljs-type">String</span> -&gt; <span class="hljs-type">Maybe</span> <span class="hljs-type">JValue</span>
+<span class="hljs-title">parseJSON</span> s = <span class="hljs-keyword">case</span> runParser jValue s <span class="hljs-keyword">of</span>
+  <span class="hljs-type">Just</span> (<span class="hljs-string">&quot;&quot;</span>, j) -&gt; <span class="hljs-type">Just</span> j
+  _ -&gt; <span class="hljs-type">Nothing</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-29">&#x00a7;</a>
+              </div>
+              <p><code>main</code> function reads text from standard input, and parses it as a JSON value.
+Prints a message indicating whether parsing succeeded or failed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-title">main</span> :: <span class="hljs-type">IO</span> ()
+<span class="hljs-title">main</span> =
+  getContents &gt;&gt;= \input -&gt; <span class="hljs-keyword">case</span> parseJSON input <span class="hljs-keyword">of</span>
+    <span class="hljs-type">Just</span> _ -&gt; putStrLn <span class="hljs-string">&quot;Parse okay&quot;</span>
+    <span class="hljs-type">Nothing</span> -&gt; putStrLn <span class="hljs-string">&quot;Parse failed&quot;</span> &gt;&gt; exitFailure</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

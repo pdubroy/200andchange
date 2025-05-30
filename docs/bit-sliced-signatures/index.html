@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Bit-sliced signatures</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="index.html">
+                  ./bit-sliced-signatures/index.c
+                </a>
+              
+                
+                <a class="source" href="../json-parser/index.html">
+                  ./json-parser/index.hs
+                </a>
+              
+                
+                <a class="source" href="../just-in-time/index.html">
+                  ./just-in-time/index.py
+                </a>
+              
+                
+                <a class="source" href="../packrat-parsing/index.html">
+                  ./packrat-parsing/index.js
+                </a>
+              
+                
+                <a class="source" href="../precedence-climbing/index.html">
+                  ./precedence-climbing/index.py
+                </a>
+              
+                
+                <a class="source" href="../relational-db/index.html">
+                  ./relational-db/index.py
+                </a>
+              
+                
+                <a class="source" href="../virtual-dom/index.html">
+                  ./virtual-dom/index.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-1">&#x00a7;</a>
+              </div>
+              <h1 id="bit-sliced-signatures">Bit-sliced signatures</h1>
+<p>Bit-sliced signatures are a way to speed up searches by rejecting files that
+don’t match a query string.  Each file is split into trigrams, which are
+hashed and inserted into a per-file Bloom filter.  The Bloom filters are then
+transposed, yielding an array of bitmaps indicating which files have each
+given bit set in their respective Bloom filters.  This array is stored as the
+index.</p>
+<p>To search using the index, the query string is split into trigrams and hashed
+in the same way.  For a file to contain the query string, it must contain
+all of its trigrams, which means the bits corresponding to the hashes of the
+trigrams in the query must be set.  Intersecting the bitmaps for these bits
+gives the bitmap of files that may contain the query string, allowing the
+full search to look at only those files.</p>
+<p>An improved variant of this technique was used (at least for a while) in the
+Bing search engine: <a href="https://www.microsoft.com/en-us/research/publication/bitfunnel-revisiting-signatures-search/">https://www.microsoft.com/en-us/research/publication/bitfunnel-revisiting-signatures-search/</a></p>
+<p>Built as <code>cc -O2 -std=c11 -pedantic -Wall -o search-index index.c</code>.</p>
+<p><strong>License:</strong> This software belongs to a future without copyright.  Please use it however you’d like.<br>
+<strong>Authorship:</strong> <a href="http://ianhenderson.org/">Ian Henderson</a>, May 2025</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-meta">#<span class="hljs-keyword">define</span> _GNU_SOURCE</span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;fcntl.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;fts.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stddef.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdint.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdlib.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;string.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/mman.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/stat.h&gt;</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;unistd.h&gt;</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-2">&#x00a7;</a>
+              </div>
+              <hr>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-3">&#x00a7;</a>
+              </div>
+              
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-4">&#x00a7;</a>
+              </div>
+              <p>From <a href="https://github.com/imneme/pcg-c/blob/master/include/pcg_variants.h">https://github.com/imneme/pcg-c/blob/master/include/pcg_variants.h</a>.
+Used as a simple hash function for trigrams.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">inline</span> <span class="hljs-type">uint32_t</span> <span class="hljs-title function_">pcg_output_rxs_m_xs_32_32</span><span class="hljs-params">(<span class="hljs-type">uint32_t</span> state)</span>
+{
+    <span class="hljs-type">uint32_t</span> word = ((state &gt;&gt; ((state &gt;&gt; <span class="hljs-number">28u</span>) + <span class="hljs-number">4u</span>)) ^ state) * <span class="hljs-number">277803737u</span>;
+    <span class="hljs-keyword">return</span> (word &gt;&gt; <span class="hljs-number">22u</span>) ^ word;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-5">&#x00a7;</a>
+              </div>
+              <p>Information needed to compute the index file size and data offsets.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index_metadata</span> {</span>
+    <span class="hljs-type">uint64_t</span> number_of_files;
+    <span class="hljs-type">uint64_t</span> length_of_file_paths;
+};</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-6">&#x00a7;</a>
+              </div>
+              <p>A <code>struct index_file</code> is memory-mapped from the index file itself.  The
+<code>data</code> field contains, in order:</p>
+<ol>
+<li>the paths to each indexed file, separated by ‘\0’ bytes,</li>
+<li>the offset into the file paths for each file, to avoid having to scan the
+  list to look up a particular file path, and</li>
+<li>the array of bitmaps indicating which files have which bits set in their
+  trigram Bloom filter.</li>
+</ol>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index_file</span> {</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index_metadata</span> <span class="hljs-title">meta</span>;</span>
+    <span class="hljs-type">uint64_t</span> data[];
+};</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-7">&#x00a7;</a>
+              </div>
+              <p>A wrapper around a <code>struct index_file</code> with easy, precomputed access to the
+different sections of the <code>data</code> field, as well as a <code>stride</code> field that
+represents the distance between each bitmap in <code>bitmaps</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index</span> {</span>
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index_file</span> *<span class="hljs-title">file</span>;</span>
+    <span class="hljs-type">size_t</span> stride;
+    <span class="hljs-type">char</span> *file_paths;
+    <span class="hljs-type">uint64_t</span> *file_path_offsets;
+    <span class="hljs-type">uint64_t</span> *bitmaps;
+};</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-8">&#x00a7;</a>
+              </div>
+              <p>The size of the Bloom filter.  The Bloom filter parameters were tuned based
+on the distribution of trigrams in the Linux kernel source.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-meta">#<span class="hljs-keyword">define</span> FILTER_BITS 14</span>
+<span class="hljs-meta">#<span class="hljs-keyword">define</span> FILTER_SIZE (1 &lt;&lt; FILTER_BITS)</span>
+<span class="hljs-meta">#<span class="hljs-keyword">define</span> FILTER_MASK (FILTER_SIZE - 1)</span>
+
+<span class="hljs-type">static</span> <span class="hljs-type">uint64_t</span> <span class="hljs-title function_">index_stride</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> index_metadata meta)</span>
+{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-9">&#x00a7;</a>
+              </div>
+              <p>Bits are stored in chunks of 64; round the number of files up to a
+multiple of 64 so everything is aligned properly.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> (meta.number_of_files + <span class="hljs-number">63</span>) / <span class="hljs-number">64</span>;
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-10">&#x00a7;</a>
+              </div>
+              <p>The total size of an index file with the given metadata.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-type">static</span> <span class="hljs-type">size_t</span> <span class="hljs-title function_">index_file_size</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> index_metadata meta)</span>
+{
+    <span class="hljs-keyword">return</span> offsetof(<span class="hljs-keyword">struct</span> index_file, data) + <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">uint64_t</span>) * (meta.length_of_file_paths + meta.number_of_files + FILTER_SIZE * index_stride(meta));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-11">&#x00a7;</a>
+              </div>
+              <p>Map an index file into memory, initializing its metadata if specified.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-type">static</span> <span class="hljs-keyword">struct</span> index <span class="hljs-title function_">index_mmap</span><span class="hljs-params">(<span class="hljs-type">int</span> fd, <span class="hljs-type">int</span> prot, <span class="hljs-keyword">struct</span> index_metadata *meta)</span>
+{
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index</span> <span class="hljs-title">index</span>;</span>
+    <span class="hljs-keyword">if</span> (meta) {
+        ftruncate(fd, index_file_size(*meta));
+        index.file = mmap(<span class="hljs-number">0</span>, index_file_size(*meta), prot, MAP_SHARED, fd, <span class="hljs-number">0</span>);
+        index.file-&gt;meta = *meta;
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">struct</span> index_metadata meta = { <span class="hljs-number">0</span> };
+        pread(fd, &amp;meta, <span class="hljs-keyword">sizeof</span>(meta), <span class="hljs-number">0</span>);
+        index.file = mmap(<span class="hljs-number">0</span>, index_file_size(meta), prot, MAP_SHARED, fd, <span class="hljs-number">0</span>);
+    }
+    index.stride = index_stride(index.file-&gt;meta);
+    index.file_paths = (<span class="hljs-type">char</span> *)index.file-&gt;data;
+    index.file_path_offsets = index.file-&gt;data + index.file-&gt;meta.length_of_file_paths;
+    index.bitmaps = index.file-&gt;data + index.file-&gt;meta.length_of_file_paths + index.file-&gt;meta.number_of_files;
+    <span class="hljs-keyword">return</span> index;
+}
+
+<span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">index_munmap</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> index index)</span>
+{
+    munmap(index.file, index_file_size(index.file-&gt;meta));
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-12">&#x00a7;</a>
+              </div>
+              <p>Given a file path that’s already been written to the <code>file_paths</code> part of the
+index file, <code>index_add_file</code> records its offset in <code>file_path_offsets</code>, then
+iterates over each trigram in the file, adding bits to the proper bitmaps as
+it goes.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">index_add_file</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> index index, <span class="hljs-type">size_t</span> file_path_offset, <span class="hljs-type">uint64_t</span> which_file)</span>
+{
+    index.file_path_offsets[which_file] = file_path_offset;
+    <span class="hljs-type">int</span> fd = open(index.file_paths + file_path_offset, O_RDONLY);
+    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">stat</span> <span class="hljs-title">file_stat</span>;</span>
+    fstat(fd, &amp;file_stat);
+    <span class="hljs-keyword">if</span> (file_stat.st_size &gt;= <span class="hljs-number">3</span>) {
+        <span class="hljs-type">uint8_t</span> *data = mmap(<span class="hljs-number">0</span>, file_stat.st_size, PROT_READ, MAP_SHARED, fd, <span class="hljs-number">0</span>);
+        <span class="hljs-type">uint32_t</span> trigram = ((<span class="hljs-type">uint32_t</span>)data[<span class="hljs-number">0</span>] &lt;&lt; <span class="hljs-number">8</span>) | (<span class="hljs-type">uint32_t</span>)data[<span class="hljs-number">1</span>];
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">off_t</span> i = <span class="hljs-number">2</span>; i &lt; file_stat.st_size; ++i) {
+            trigram = ((trigram &lt;&lt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xffffffu</span>l) | data[i];
+            <span class="hljs-type">uint32_t</span> hash = pcg_output_rxs_m_xs_32_32(trigram);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-13">&#x00a7;</a>
+              </div>
+              <p>Note that each trigram sets two bits; this is one of the tunable
+parameters of the Bloom filter.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            index.bitmaps[index.stride * (hash &amp; FILTER_MASK) + which_file / <span class="hljs-number">64</span>] |= <span class="hljs-number">1ull</span> &lt;&lt; (which_file % <span class="hljs-number">64</span>);
+            index.bitmaps[index.stride * ((hash &gt;&gt; FILTER_BITS) &amp; FILTER_MASK) + which_file / <span class="hljs-number">64</span>] |= <span class="hljs-number">1ull</span> &lt;&lt; (which_file % <span class="hljs-number">64</span>);
+        }
+        munmap(data, file_stat.st_size);
+    }
+    close(fd);
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-14">&#x00a7;</a>
+              </div>
+              <p>Perform a search over the files using the index.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">index_search</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> index index, <span class="hljs-type">char</span> *query)</span>
+{</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-15">&#x00a7;</a>
+              </div>
+              <p>First, intersect the bitmaps for each trigram in <code>query_bitmap</code>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-type">uint64_t</span> *query_bitmap = <span class="hljs-built_in">malloc</span>(index.stride * <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">uint64_t</span>));
+    <span class="hljs-built_in">memset</span>(query_bitmap, <span class="hljs-number">0xff</span>, index.stride * <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">uint64_t</span>));
+    <span class="hljs-type">size_t</span> query_length = <span class="hljs-built_in">strlen</span>(query);
+    <span class="hljs-keyword">if</span> (query_length &gt;= <span class="hljs-number">3</span>) {
+        <span class="hljs-type">uint32_t</span> trigram = ((<span class="hljs-type">uint32_t</span>)query[<span class="hljs-number">0</span>] &lt;&lt; <span class="hljs-number">8</span>) | (<span class="hljs-type">uint32_t</span>)query[<span class="hljs-number">1</span>];
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span> i = <span class="hljs-number">2</span>; i &lt; query_length; ++i) {
+            trigram = ((trigram &lt;&lt; <span class="hljs-number">8</span>) &amp; <span class="hljs-number">0xffffffu</span>l) | query[i];
+            <span class="hljs-type">uint32_t</span> hash = pcg_output_rxs_m_xs_32_32(trigram);
+            <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span> j = <span class="hljs-number">0</span>; j &lt; index.stride; ++j) {
+                query_bitmap[j] &amp;= index.bitmaps[index.stride * (hash &amp; FILTER_MASK) + j];
+                query_bitmap[j] &amp;= index.bitmaps[index.stride * ((hash &gt;&gt; FILTER_BITS) &amp; FILTER_MASK) + j];
+            }
+        }
+    }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-16">&#x00a7;</a>
+              </div>
+              <p>Then iterate over the bits of <code>query_bitmap</code>, searching each file which
+has its bit set.  False positives are possible, but don’t require any
+extra logic to deal with, since no matches will be found and no lines
+will be printed.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> (<span class="hljs-type">uint64_t</span> i = <span class="hljs-number">0</span>; i &lt; index.stride; ++i) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-17">&#x00a7;</a>
+              </div>
+              <p>If all the bits are zero, skip the whole group of 64 files.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (!query_bitmap[i])
+            <span class="hljs-keyword">continue</span>;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>; j &lt; <span class="hljs-number">64</span>; ++j) {
+            <span class="hljs-keyword">if</span> (i * <span class="hljs-number">64</span> + j &gt;= index.file-&gt;meta.number_of_files)
+                <span class="hljs-keyword">break</span>;
+            <span class="hljs-keyword">if</span> (!(query_bitmap[i] &amp; (<span class="hljs-number">1ull</span> &lt;&lt; j)))
+                <span class="hljs-keyword">continue</span>;
+            <span class="hljs-type">char</span> *file_path = index.file_paths + index.file_path_offsets[i * <span class="hljs-number">64</span> + j];
+            <span class="hljs-type">int</span> fd = open(file_path, O_RDONLY);
+            <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">stat</span> <span class="hljs-title">file_stat</span>;</span>
+            fstat(fd, &amp;file_stat);
+            <span class="hljs-type">uint8_t</span> *data_start = mmap(<span class="hljs-number">0</span>, file_stat.st_size, PROT_READ, MAP_SHARED, fd, <span class="hljs-number">0</span>);
+            close(fd);
+            <span class="hljs-type">uint8_t</span> *data_end = data_start + file_stat.st_size;
+            <span class="hljs-type">uint8_t</span> *line_end = data_start;
+            <span class="hljs-type">uint8_t</span> *match;
+            <span class="hljs-keyword">while</span> ((match = memmem(line_end, data_end - line_end, query, query_length))) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-18">&#x00a7;</a>
+              </div>
+              <p>Find the beginning and end of the line containing the match.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                line_end = <span class="hljs-built_in">memchr</span>(match + query_length, <span class="hljs-string">&#x27;\n&#x27;</span>, data_end - (match + query_length));
+                <span class="hljs-keyword">if</span> (!line_end)
+                    line_end = data_end;
+                <span class="hljs-type">uint8_t</span> *line_start = match;
+                <span class="hljs-keyword">while</span> (line_start &gt; data_start &amp;&amp; line_start[<span class="hljs-number">-1</span>] != <span class="hljs-string">&#x27;\n&#x27;</span>)
+                    line_start--;
+                <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s: &quot;</span>, file_path);
+                fwrite(line_start, <span class="hljs-number">1</span>, line_end - line_start, <span class="hljs-built_in">stdout</span>);
+                fputc(<span class="hljs-string">&#x27;\n&#x27;</span>, <span class="hljs-built_in">stdout</span>);
+            }
+            munmap(data_start, file_stat.st_size);
+        }
+    }
+    <span class="hljs-built_in">free</span>(query_bitmap);
+}
+
+<span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">usage</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span>
+{
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;USAGE\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;  search-index index [index file path] &lt;directory path&gt;\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;    creates an index for the given directory at the given index file path.\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;    the index file path defaults to &#x27;search.index&#x27; if unspecified.\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;  search-index search [index file path] &lt;query string&gt;\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;    performs a search for the given query string using the index file.\n&quot;</span>);
+    <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;    the index file path defaults to &#x27;search.index&#x27; if unspecified.\n&quot;</span>);
+    <span class="hljs-built_in">exit</span>(<span class="hljs-number">1</span>);
+}
+
+<span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span> *argv[])</span>
+{
+    <span class="hljs-keyword">if</span> (argc &lt; <span class="hljs-number">3</span>)
+        usage();
+    <span class="hljs-type">char</span> *index_file_path = <span class="hljs-string">&quot;search.index&quot;</span>;
+    <span class="hljs-type">char</span> *query = argv[<span class="hljs-number">2</span>];
+    <span class="hljs-keyword">if</span> (argc == <span class="hljs-number">4</span>) {
+        index_file_path = argv[<span class="hljs-number">2</span>];
+        query = argv[<span class="hljs-number">3</span>];
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (argc &gt; <span class="hljs-number">4</span>)
+        usage();
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(argv[<span class="hljs-number">1</span>], <span class="hljs-string">&quot;index&quot;</span>) == <span class="hljs-number">0</span>) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-19">&#x00a7;</a>
+              </div>
+              <p>To build the index, start by using normal C I/O functions to write
+the list of file paths.  After that’s done, the final length of the
+index file is known, and mmap is used to write the rest of the data.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        FILE *index_file = fopen(index_file_path, <span class="hljs-string">&quot;w+&quot;</span>);
+        <span class="hljs-keyword">if</span> (!index_file) {
+            <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;couldn&#x27;t open index file at &#x27;%s&#x27;.\n&quot;</span>, index_file_path);
+            <span class="hljs-built_in">exit</span>(<span class="hljs-number">1</span>);
+        }
+        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index_metadata</span> <span class="hljs-title">meta</span> =</span> { <span class="hljs-number">0</span> };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-20">&#x00a7;</a>
+              </div>
+              <p>Leave space for the metadata at the beginning of the file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        fwrite(&amp;meta, <span class="hljs-keyword">sizeof</span>(meta), <span class="hljs-number">1</span>, index_file);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-21">&#x00a7;</a>
+              </div>
+              <p>Iterate over the directory, writing each path to the file.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        FTS *fts = fts_open((<span class="hljs-type">char</span> *[]){ query, <span class="hljs-literal">NULL</span> }, FTS_PHYSICAL, <span class="hljs-literal">NULL</span>);
+        <span class="hljs-keyword">if</span> (!fts) {
+            <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;couldn&#x27;t read directory at &#x27;%s&#x27;.\n&quot;</span>, query);
+            <span class="hljs-built_in">exit</span>(<span class="hljs-number">1</span>);
+        }
+        FTSENT *entry;
+        <span class="hljs-keyword">while</span> ((entry = fts_read(fts)) != <span class="hljs-literal">NULL</span>) {
+            <span class="hljs-keyword">if</span> (entry-&gt;fts_info != FTS_F)
+                <span class="hljs-keyword">continue</span>;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-22">&#x00a7;</a>
+              </div>
+              <p>Include the NULL terminator when writing a path – it’s used as a
+separator.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            fwrite(entry-&gt;fts_path, <span class="hljs-number">1</span>, entry-&gt;fts_pathlen + <span class="hljs-number">1</span>, index_file);
+            meta.number_of_files++;
+            meta.length_of_file_paths += entry-&gt;fts_pathlen + <span class="hljs-number">1</span>;
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-23">&#x00a7;</a>
+              </div>
+              <p>Rescale <code>length_of_file_paths</code> so it can be used as an index into the
+<code>data</code> array of 64-bit integers.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        meta.length_of_file_paths = (meta.length_of_file_paths + <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">uint64_t</span>) - <span class="hljs-number">1</span>) / <span class="hljs-keyword">sizeof</span>(<span class="hljs-type">uint64_t</span>);
+        fts_close(fts);
+        fflush(index_file);
+        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index</span> <span class="hljs-title">index</span> =</span> index_mmap(fileno(index_file), PROT_READ | PROT_WRITE, &amp;meta);
+        fclose(index_file);
+        <span class="hljs-type">size_t</span> file_path_offset = <span class="hljs-number">0</span>;
+        <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;building index.&quot;</span>);
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">size_t</span> which_file = <span class="hljs-number">0</span>; which_file &lt; meta.number_of_files; which_file++) {
+            <span class="hljs-keyword">if</span> (!(which_file % <span class="hljs-number">5000</span>))
+                <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;.&quot;</span>);
+            index_add_file(index, file_path_offset, which_file);
+            file_path_offset += <span class="hljs-built_in">strlen</span>(index.file_paths + file_path_offset) + <span class="hljs-number">1</span>;
+        }
+        <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot; done.\n&quot;</span>);
+        index_munmap(index);
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strcmp</span>(argv[<span class="hljs-number">1</span>], <span class="hljs-string">&quot;search&quot;</span>) == <span class="hljs-number">0</span>) {
+        <span class="hljs-type">int</span> index_fd = open(index_file_path, O_RDONLY);
+        <span class="hljs-keyword">if</span> (index_fd &lt; <span class="hljs-number">0</span>) {
+            <span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stderr</span>, <span class="hljs-string">&quot;couldn&#x27;t open index file at &#x27;%s&#x27;.\n&quot;</span>, index_file_path);
+            <span class="hljs-built_in">exit</span>(<span class="hljs-number">1</span>);
+        }
+        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">index</span> <span class="hljs-title">index</span> =</span> index_mmap(index_fd, PROT_READ, <span class="hljs-literal">NULL</span>);
+        close(index_fd);
+        index_search(index, query);
+        index_munmap(index);
+    } <span class="hljs-keyword">else</span>
+        usage();
+}</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

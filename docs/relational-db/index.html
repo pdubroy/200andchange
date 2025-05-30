@@ -20,6 +20,21 @@
             <div id="jump_page">
               
                 
+                <a class="source" href="../bit-sliced-signatures/index.html">
+                  ./bit-sliced-signatures/index.c
+                </a>
+              
+                
+                <a class="source" href="../json-parser/index.html">
+                  ./json-parser/index.hs
+                </a>
+              
+                
+                <a class="source" href="../just-in-time/index.html">
+                  ./just-in-time/index.py
+                </a>
+              
+                
                 <a class="source" href="../packrat-parsing/index.html">
                   ./packrat-parsing/index.js
                 </a>
@@ -66,49 +81,49 @@ to Python.</p>
 
 <span class="hljs-keyword">class</span> <span class="hljs-title class_">Table</span>:
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, name: <span class="hljs-built_in">str</span>, rows: <span class="hljs-built_in">tuple</span>[<span class="hljs-built_in">dict</span>] = (<span class="hljs-params"></span>)</span>):
-        self.name = name
-        self.rows = <span class="hljs-built_in">tuple</span>(rows)
-        self._colnames = ()
+        <span class="hljs-variable language_">self</span>.name = name
+        <span class="hljs-variable language_">self</span>.rows = <span class="hljs-built_in">tuple</span>(rows)
+        <span class="hljs-variable language_">self</span>._colnames = ()
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">set_colnames</span>(<span class="hljs-params">self, colnames</span>):
-        self._colnames = <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(colnames))
+        <span class="hljs-variable language_">self</span>._colnames = <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(colnames))
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">colnames</span>(<span class="hljs-params">self</span>):
-        <span class="hljs-keyword">if</span> self._colnames:
-            <span class="hljs-keyword">return</span> self._colnames
-        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> self.rows:
+        <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>._colnames:
+            <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>._colnames
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> <span class="hljs-variable language_">self</span>.rows:
             <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">&quot;Need either rows or manually specified column names&quot;</span>)
-        <span class="hljs-keyword">return</span> <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(self.rows[<span class="hljs-number">0</span>].keys()))
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">tuple</span>(<span class="hljs-built_in">sorted</span>(<span class="hljs-variable language_">self</span>.rows[<span class="hljs-number">0</span>].keys()))
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">filter</span>(<span class="hljs-params">self, pred</span>):
-        <span class="hljs-keyword">return</span> Table(self.name, [row <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> self.rows <span class="hljs-keyword">if</span> pred(row)])
+        <span class="hljs-keyword">return</span> Table(<span class="hljs-variable language_">self</span>.name, [row <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>.rows <span class="hljs-keyword">if</span> pred(row)])
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__repr__</span>(<span class="hljs-params">self</span>):
-        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> self.name:
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> <span class="hljs-variable language_">self</span>.name:
             <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Table(<span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.rows)!r}</span>)&quot;</span>
         <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Table(<span class="hljs-subst">{self.name!r}</span>, <span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.rows)!r}</span>)&quot;</span>
 
 
 <span class="hljs-keyword">class</span> <span class="hljs-title class_">Database</span>:
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self</span>):
-        self.tables = {}
+        <span class="hljs-variable language_">self</span>.tables = {}
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">CREATE_TABLE</span>(<span class="hljs-params">self, name, colnames=(<span class="hljs-params"></span>)</span>):
         table = Table(name)
         <span class="hljs-keyword">if</span> colnames:
             table.set_colnames(colnames)
-        self.tables[name] = table
+        <span class="hljs-variable language_">self</span>.tables[name] = table
         <span class="hljs-keyword">return</span> table
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">DROP_TABLE</span>(<span class="hljs-params">self, name</span>):
-        <span class="hljs-keyword">del</span> self.tables[name]
+        <span class="hljs-keyword">del</span> <span class="hljs-variable language_">self</span>.tables[name]
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">FROM</span>(<span class="hljs-params">self, first_table, *rest</span>):
-        match rest:
-            case ():
-                <span class="hljs-keyword">return</span> self.tables[first_table]
-            case _:
-                <span class="hljs-keyword">return</span> self.CROSS_JOIN(self.tables[first_table], self.FROM(*rest))
+        <span class="hljs-keyword">match</span> rest:
+            <span class="hljs-keyword">case</span> ():
+                <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.tables[first_table]
+            <span class="hljs-keyword">case</span> _:
+                <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.CROSS_JOIN(<span class="hljs-variable language_">self</span>.tables[first_table], <span class="hljs-variable language_">self</span>.FROM(*rest))
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">SELECT</span>(<span class="hljs-params">self, table, columns, aliases=<span class="hljs-literal">None</span></span>):
         <span class="hljs-keyword">if</span> aliases <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:
@@ -125,7 +140,7 @@ to Python.</p>
         <span class="hljs-keyword">return</span> table.<span class="hljs-built_in">filter</span>(pred)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">INSERT_INTO</span>(<span class="hljs-params">self, table_name, rows</span>):
-        table = self.tables[table_name]
+        table = <span class="hljs-variable language_">self</span>.tables[table_name]
         table.rows = (*table.rows, *rows)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">UPDATE</span>(<span class="hljs-params">self, table, <span class="hljs-built_in">set</span>, pred=<span class="hljs-keyword">lambda</span> _: <span class="hljs-literal">True</span></span>):
@@ -148,7 +163,7 @@ to Python.</p>
         <span class="hljs-keyword">return</span> Table(<span class="hljs-string">&quot;&quot;</span>, rows)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">INNER_JOIN</span>(<span class="hljs-params">self, a, b, pred</span>):
-        <span class="hljs-keyword">return</span> self.CROSS_JOIN(a, b).<span class="hljs-built_in">filter</span>(pred)
+        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.CROSS_JOIN(a, b).<span class="hljs-built_in">filter</span>(pred)
 
     JOIN = INNER_JOIN
 
@@ -171,7 +186,7 @@ to Python.</p>
         <span class="hljs-keyword">return</span> Table(<span class="hljs-string">&quot;&quot;</span>, rows)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">RIGHT_JOIN</span>(<span class="hljs-params">self, a, b, pred</span>):
-        <span class="hljs-keyword">return</span> self.LEFT_JOIN(b, a, pred)
+        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.LEFT_JOIN(b, a, pred)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">LIMIT</span>(<span class="hljs-params">self, table, limit</span>):
         <span class="hljs-keyword">return</span> Table(table.name, table.rows[:limit])
@@ -241,13 +256,13 @@ to Python.</p>
         <span class="hljs-keyword">return</span> Table(table.name, rows)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">COUNT</span>(<span class="hljs-params">self, table, col</span>):
-        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;COUNT&quot;</span>, <span class="hljs-built_in">len</span>)
+        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>._aggregate(table, col, <span class="hljs-string">&quot;COUNT&quot;</span>, <span class="hljs-built_in">len</span>)
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">MAX</span>(<span class="hljs-params">self, table, col</span>):
-        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;MAX&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">max</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
+        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>._aggregate(table, col, <span class="hljs-string">&quot;MAX&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">max</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">SUM</span>(<span class="hljs-params">self, table, col</span>):
-        <span class="hljs-keyword">return</span> self._aggregate(table, col, <span class="hljs-string">&quot;SUM&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">sum</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
+        <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>._aggregate(table, col, <span class="hljs-string">&quot;SUM&quot;</span>, <span class="hljs-keyword">lambda</span> rows: <span class="hljs-built_in">sum</span>(row[col] <span class="hljs-keyword">for</span> row <span class="hljs-keyword">in</span> rows))
 
     <span class="hljs-keyword">def</span> <span class="hljs-title function_">__repr__</span>(<span class="hljs-params">self</span>):
         <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;Database(<span class="hljs-subst">{<span class="hljs-built_in">list</span>(self.tables.keys())!r}</span>)&quot;</span></pre></div></div>
