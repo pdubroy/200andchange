@@ -40,7 +40,7 @@ class Matcher {
     return !!this.memoTableAt(this.pos)[ruleName];
   }
 
-  memoizeResult(pos, ruleName, cst) {
+  memoizeResult(ruleName, pos, cst) {
     const result = { cst, nextPos: this.pos };
     this.memoTableAt(pos)[ruleName] = result;
     return result;
@@ -51,7 +51,16 @@ class Matcher {
     // Unconditionally set the position. If it was a failure, `result.cst`
     // is `null` and the assignment to `this.pos` is a noop.
     this.pos = result.nextPos;
+    if (`used` in result) {
+      result.used = true; // this result is a left recursion failure!
+    }
     return result.cst;
+  }
+
+  memoizeLRFailureAtCurrPos(ruleName) {
+    const lrFailure = { cst: null, nextPos: -1, used: false };
+    this.memoTableAt(this.pos)[ruleName] = lrFailure;
+    return lrFailure;
   }
 
   consume(c) {
@@ -69,15 +78,23 @@ class RuleApplication {
   }
 
   eval(matcher) {
-    const name = this.ruleName;
-    if (matcher.hasMemoizedResult(name)) {
-      return matcher.useMemoizedResult(name);
-    } else {
-      const origPos = matcher.pos;
-      const cst = matcher.rules[name].eval(matcher);
-      matcher.memoizeResult(origPos, name, cst);
-      return cst;
+    if (matcher.hasMemoizedResult(this.ruleName)) {
+      return matcher.useMemoizedResult(this.ruleName);
     }
+    const origPos = matcher.pos;
+    const lrFailure = matcher.memoizeLRFailureAtCurrPos(this.ruleName);
+    let cst = matcher.rules[this.ruleName].eval(matcher);
+    const result = matcher.memoizeResult(this.ruleName, origPos, cst);
+    if (lrFailure.used) {
+      do {
+        result.cst = cst;
+        result.nextPos = matcher.pos;
+        matcher.pos = origPos;
+        cst = matcher.rules[this.ruleName].eval(matcher);
+      } while (cst !== null && matcher.pos > result.nextPos);
+      matcher.pos = result.nextPos;
+    }
+    return result.cst;
   }
 }
 
@@ -194,3 +211,19 @@ assertOk(m.match("x"));
 assertOk(m.match("x-z"));
 assertOk(m.match("x+y-z"));
 assertOk(!m.match("x+y-"));
+
+// A little example w/ left recursion:
+
+const g = new Matcher({
+  start: new RuleApplication("mulExp"),
+  mulExp: new Choice([
+    new Sequence([
+      new RuleApplication("mulExp"),
+      new Terminal("+"),
+      new RuleApplication("priExp"),
+    ]),
+    new RuleApplication("priExp"),
+  ]),
+  priExp: new Choice([new Terminal("pi"), new Terminal("x")]),
+});
+assertOk(g.match("pi+pi+x"));
