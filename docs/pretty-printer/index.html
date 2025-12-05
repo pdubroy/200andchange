@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Pretty Printer</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="../docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+              
+                
+                <a class="source" href="../bit-sliced-signatures/index.html">
+                  ./bit-sliced-signatures/index.c
+                </a>
+              
+                
+                <a class="source" href="../json-parser/index.html">
+                  ./json-parser/index.hs
+                </a>
+              
+                
+                <a class="source" href="../just-in-time/index.html">
+                  ./just-in-time/index.py
+                </a>
+              
+                
+                <a class="source" href="../packrat-parsing/index.html">
+                  ./packrat-parsing/index.js
+                </a>
+              
+                
+                <a class="source" href="../precedence-climbing/index.html">
+                  ./precedence-climbing/index.py
+                </a>
+              
+                
+                <a class="source" href="index.html">
+                  ./pretty-printer/index.js
+                </a>
+              
+                
+                <a class="source" href="../relational-db/index.html">
+                  ./relational-db/index.py
+                </a>
+              
+                
+                <a class="source" href="../virtual-dom/index.html">
+                  ./virtual-dom/index.js
+                </a>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-1">&#x00a7;</a>
+              </div>
+              <h1 id="pretty-printer">Pretty Printer</h1>
+<p>This is an implementation of a pretty printer library.</p>
+<p>It comes from <a href="https://github.com/brownplt/pretty-fast-pretty-printer">Pretty Fast Pretty Printer</a> (<a href="https://github.com/brownplt/pretty-fast-pretty-printer/blob/4f35205ddd5cbe3ff699f53364693026a1ffdbbc/index.js">ed78c97</a>) by brownplt:</p>
+<p>Pretty printing is an approach to printing source code that can adapt how things are printed to fit within a maximum line width.</p>
+<p>There are a variety of pretty-printing algorithms. The
+pretty-fast-pretty-printer uses a custom algorithm
+that displays a document in time <strong>linear</strong> in the number of distinct nodes in
+the document. (Note that this is better than linear in the <em>size</em> of the
+document: if a document contains multiple references to a single sub-document,
+that sub-document is only counted <em>once</em>. This can be an exponential
+improvement.)</p>
+<p>The algorithm takes inspiration from:</p>
+<ol>
+<li>Wadler’s
+<a href="http://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">Prettier Printer</a>,</li>
+<li>Bernardy’s
+<a href="https://jyp.github.io/pdf/Prettiest.pdf">Pretty but not Greedy Printer</a>, and</li>
+<li>Ben Lerner’s
+<a href="https://github.com/brownplt/pyret-lang/blob/horizon/src/arr/trove/pprint.arr">Pyret pretty printer</a></li>
+</ol>
+<p>This pretty printer was developed as part of <a href="https://github.com/bootstrapworld/codemirror-blocks">Codemirror Blocks</a></p>
+<p>Don’t let this stop you from using it for your own project, though: it’s a
+general purpose library!</p>
+<p><strong>License:</strong> <a href="https://github.com/brownplt/pretty-fast-pretty-printer/blob/4f35205ddd5cbe3ff699f53364693026a1ffdbbc/LICENSE">MIT</a><br>
+<strong>Copyright:</strong> © 2019 Brown University PLT</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">txt</span>(<span class="hljs-params">arg</span>) {
+  <span class="hljs-keyword">let</span> text = arg.<span class="hljs-title function_">toString</span>(); <span class="hljs-comment">// coerce to a string if it isn&#x27;t already</span>
+  <span class="hljs-keyword">if</span> (text.<span class="hljs-title function_">indexOf</span>(<span class="hljs-string">&quot;\n&quot;</span>) !== -<span class="hljs-number">1</span>) {
+    <span class="hljs-keyword">throw</span> (
+      <span class="hljs-string">&quot;pretty.js: The `txt` function does not accept text with newlines, but was given: &quot;</span> +
+      text
+    );
+  }
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TextDoc</span>(text);
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">horz</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">horzArray</span>(<span class="hljs-title class_">Array</span>.<span class="hljs-title function_">from</span>(<span class="hljs-variable language_">arguments</span>));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">vert</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">vertArray</span>(<span class="hljs-title class_">Array</span>.<span class="hljs-title function_">from</span>(<span class="hljs-variable language_">arguments</span>));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">concat</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">concatArray</span>(<span class="hljs-title class_">Array</span>.<span class="hljs-title function_">from</span>(<span class="hljs-variable language_">arguments</span>));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">horzArray</span>(<span class="hljs-params">array</span>) {
+  <span class="hljs-keyword">if</span> (array.<span class="hljs-property">length</span> == <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-title function_">txt</span>(<span class="hljs-string">&quot;&quot;</span>);
+  <span class="hljs-keyword">let</span> docArray = array.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">item</span>) =&gt;</span> <span class="hljs-title function_">coerce</span>(item));
+  <span class="hljs-keyword">return</span> docArray.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">result, doc</span>) =&gt;</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HorzDoc</span>(result, doc));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">vertArray</span>(<span class="hljs-params">array</span>) {
+  <span class="hljs-keyword">if</span> (array.<span class="hljs-property">length</span> == <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-title function_">txt</span>(<span class="hljs-string">&quot;&quot;</span>);
+  <span class="hljs-keyword">let</span> docArray = array.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">item</span>) =&gt;</span> <span class="hljs-title function_">coerce</span>(item));
+  <span class="hljs-keyword">return</span> docArray.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">result, doc</span>) =&gt;</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">VertDoc</span>(result, doc));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">concatArray</span>(<span class="hljs-params">array</span>) {
+  <span class="hljs-keyword">let</span> docArray = array.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">item</span>) =&gt;</span> <span class="hljs-title function_">coerce</span>(item));
+  <span class="hljs-keyword">return</span> docArray.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">result, doc</span>) =&gt;</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcatDoc</span>(result, doc));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">ifFlat</span>(<span class="hljs-params">flat, broken</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IfFlatDoc</span>(<span class="hljs-title function_">coerce</span>(flat), <span class="hljs-title function_">coerce</span>(broken));
+}
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">fullLine</span>(<span class="hljs-params">doc</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FullLineDoc</span>(<span class="hljs-title function_">coerce</span>(doc));
+}
+
+<span class="hljs-comment">/******************************************************************************
+ * Documents
+ *
+ *   display(width):
+ *     &quot;Pretty print a document within the given width. Returns a list of lines.&quot;
+ *
+ *   render(out, indent, column, width):
+ *     &quot;Render the document. This is the recursive call of display().&quot;
+ *     out:    The list of lines to print to.
+ *     indent: The column to return to in case of a line break.
+ *     column: The current column.
+ *     width:  The max width that the pretty printing is allowed to be.
+ *     -&gt; returns the current column after printing
+ *
+ ******************************************************************************/</span>
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">flat_width</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">flat_width</span> = flat_width;
+  }
+
+  <span class="hljs-title function_">display</span>(<span class="hljs-params">width</span>) {
+    <span class="hljs-keyword">let</span> outputLines = [<span class="hljs-string">&quot;&quot;</span>];
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">render</span>(outputLines, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, width);
+    <span class="hljs-keyword">return</span> outputLines;
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">TextDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">text</span>) {
+    <span class="hljs-variable language_">super</span>(text.<span class="hljs-property">length</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">text</span> = text;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {
+    out[out.<span class="hljs-property">length</span> - <span class="hljs-number">1</span>] += <span class="hljs-variable language_">this</span>.<span class="hljs-property">text</span>; <span class="hljs-comment">// print the text to the last line</span>
+    <span class="hljs-keyword">return</span> column + <span class="hljs-variable language_">this</span>.<span class="hljs-property">text</span>.<span class="hljs-property">length</span>;
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">HorzDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">doc1, doc2</span>) {
+    <span class="hljs-keyword">if</span> (doc1.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span> || doc2.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span>) {
+      <span class="hljs-variable language_">super</span>(<span class="hljs-literal">null</span>);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-variable language_">super</span>(doc1.<span class="hljs-property">flat_width</span> + doc2.<span class="hljs-property">flat_width</span>);
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span> = doc1;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span> = doc2;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {
+    <span class="hljs-keyword">let</span> newColumn = <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span>.<span class="hljs-title function_">render</span>(out, newColumn, newColumn, width);
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ConcatDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">doc1, doc2</span>) {
+    <span class="hljs-keyword">if</span> (doc1.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span> || doc2.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span>) {
+      <span class="hljs-variable language_">super</span>(<span class="hljs-literal">null</span>);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-variable language_">super</span>(doc1.<span class="hljs-property">flat_width</span> + doc2.<span class="hljs-property">flat_width</span>);
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span> = doc1;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span> = doc2;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {
+    <span class="hljs-keyword">let</span> newColumn = <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span>.<span class="hljs-title function_">render</span>(out, indent, newColumn, width);
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">VertDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">doc1, doc2</span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-literal">null</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span> = doc1;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span> = doc2;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc1</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+    out.<span class="hljs-title function_">push</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Array</span>(indent + <span class="hljs-number">1</span>).<span class="hljs-title function_">join</span>(<span class="hljs-string">&quot; &quot;</span>)); <span class="hljs-comment">// print newline and indent</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc2</span>.<span class="hljs-title function_">render</span>(out, indent, indent, width);
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">FullLineDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">doc</span>) {
+    <span class="hljs-variable language_">super</span>(<span class="hljs-literal">null</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc</span> = doc;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">doc</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+  }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">IfFlatDoc</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_ inherited__">Doc</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">flat, broken</span>) {
+    <span class="hljs-keyword">if</span> (flat.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span>) {
+      <span class="hljs-variable language_">super</span>(broken.<span class="hljs-property">flat_width</span>);
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (broken.<span class="hljs-property">flat_width</span> === <span class="hljs-literal">null</span>) {
+      <span class="hljs-variable language_">super</span>(flat.<span class="hljs-property">flat_width</span>);
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-variable language_">super</span>(<span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(flat.<span class="hljs-property">flat_width</span>, broken.<span class="hljs-property">flat_width</span>));
+    }
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">flat</span> = flat;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">broken</span> = broken;
+  }
+
+  <span class="hljs-title function_">render</span>(<span class="hljs-params">out, indent, column, width</span>) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-2">&#x00a7;</a>
+              </div>
+              <p>The key to the efficiency of this whole pretty printing algorithm
+is the fact that this conditional does not rely on rendering <code>this.flat</code>:</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> flat_width = <span class="hljs-variable language_">this</span>.<span class="hljs-property">flat</span>.<span class="hljs-property">flat_width</span>;
+    <span class="hljs-keyword">if</span> (flat_width !== <span class="hljs-literal">null</span> &amp;&amp; column + flat_width &lt;= width) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-3">&#x00a7;</a>
+              </div>
+              <p>If the “flat” doc fits on the line, use it.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">flat</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+    } <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-4">&#x00a7;</a>
+              </div>
+              <p>Otherwise, use the “broken” doc.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">broken</span>.<span class="hljs-title function_">render</span>(out, indent, column, width);
+    }
+  }
+}
+
+<span class="hljs-comment">/******************************************************************************
+ * String Templates
+ ******************************************************************************/</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">pretty</span>(<span class="hljs-params">strs, ...vals</span>) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-5">&#x00a7;</a>
+              </div>
+              <p>Interpret a JS string template as a pretty printing Doc.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">let</span> lines = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Array</span>(); <span class="hljs-comment">// The lines will be joined with `vert`.</span>
+  <span class="hljs-keyword">let</span> lineParts = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Array</span>(); <span class="hljs-comment">// The parts of each line will be joined with `horz`.</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-6">&#x00a7;</a>
+              </div>
+              <p>Iterate over the parts of the template in order.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; strs.<span class="hljs-property">length</span> + vals.<span class="hljs-property">length</span>; i++) {
+    <span class="hljs-keyword">if</span> (i % <span class="hljs-number">2</span> === <span class="hljs-number">0</span>) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-7">&#x00a7;</a>
+              </div>
+              <p>It’s a string part. Split it into lines.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">let</span> parts = strs[i / <span class="hljs-number">2</span>].<span class="hljs-title function_">split</span>(<span class="hljs-string">&quot;\n&quot;</span>);
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> j <span class="hljs-keyword">in</span> parts) {
+        <span class="hljs-keyword">let</span> part = parts[j];</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-8">&#x00a7;</a>
+              </div>
+              <p>For every newline in the string, push a line.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (j != <span class="hljs-number">0</span>) {
+          lines.<span class="hljs-title function_">push</span>(horz.<span class="hljs-title function_">apply</span>(<span class="hljs-literal">null</span>, lineParts));
+          lineParts = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Array</span>();
+        }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-9">&#x00a7;</a>
+              </div>
+              <p>The string must be wrapped in <code>txt</code> to become a Doc.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        lineParts.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">txt</span>(part));
+      }
+    } <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-10">&#x00a7;</a>
+              </div>
+              <p>It’s a value part. Add it.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      lineParts.<span class="hljs-title function_">push</span>(vals[(i - <span class="hljs-number">1</span>) / <span class="hljs-number">2</span>]);
+    }
+  }</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-11">&#x00a7;</a>
+              </div>
+              <p>Remember to push the last line.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  lines.<span class="hljs-title function_">push</span>(horz.<span class="hljs-title function_">apply</span>(<span class="hljs-literal">null</span>, lineParts));
+  <span class="hljs-keyword">return</span> vert.<span class="hljs-title function_">apply</span>(<span class="hljs-literal">null</span>, lines);
+}
+
+<span class="hljs-comment">/******************************************************************************
+ * Private Helper Functions
+ ******************************************************************************/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-12">&#x00a7;</a>
+              </div>
+              <p>The user has given us a thing. If they were nice, it would be a Doc.
+But they’re not nice, so it could be anything.
+Let’s see if we can make it into a Doc.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">function</span> <span class="hljs-title function_">coerce</span>(<span class="hljs-params">thing</span>) {
+  <span class="hljs-keyword">if</span> (thing <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">Doc</span>) {
+    <span class="hljs-keyword">return</span> thing;
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> thing === <span class="hljs-string">&quot;string&quot;</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">txt</span>(thing);
+  } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (thing != <span class="hljs-literal">null</span> &amp;&amp; <span class="hljs-keyword">typeof</span> thing.<span class="hljs-property">pretty</span> === <span class="hljs-string">&quot;function&quot;</span>) {
+    <span class="hljs-keyword">let</span> doc = thing.<span class="hljs-title function_">pretty</span>();
+    <span class="hljs-keyword">if</span> (!(doc <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">Doc</span>)) {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-13">&#x00a7;</a>
+              </div>
+              <p>TODO: <code>+ thing</code> is an awful way to print something; replace with something better?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(
+        <span class="hljs-string">&quot;The pretty printer called the `.pretty()` function, and expected it to return a Doc, but instead it returned: &quot;</span> +
+          thing,
+      );
+    }
+    <span class="hljs-keyword">return</span> doc;
+  } <span class="hljs-keyword">else</span> {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-14">&#x00a7;</a>
+              </div>
+              <p>What did they give us? We can’t work with this thing.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(
+      <span class="hljs-string">&quot;The pretty printer was expecting a Doc (or a String, or something with a pretty() method), but instead it was given: &quot;</span> +
+        thing,
+    );
+  }
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">intersperse</span>(<span class="hljs-params">sep, items</span>) {
+  <span class="hljs-keyword">let</span> array = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Array</span>();
+  items.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">item, i</span>) =&gt;</span> {
+    <span class="hljs-keyword">if</span> (i != <span class="hljs-number">0</span>) {
+      array.<span class="hljs-title function_">push</span>(sep);
+    }
+    array.<span class="hljs-title function_">push</span>(item);
+  });
+  <span class="hljs-keyword">return</span> array;
+}
+
+<span class="hljs-comment">/******************************************************************************
+ * Utility Constructors
+ ******************************************************************************/</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-15">&#x00a7;</a>
+              </div>
+              <p>Display all items, with each pair of adjacent items separated
+either by <code>sep</code> or by <code>vertSep\n</code>. If <code>sep</code> is txt(“ “) and
+<code>vertSep</code> is txt(“”), this implements word wrap.
+Neither <code>sep</code> nor <code>vertSep</code> may contain newlines.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">function</span> <span class="hljs-title function_">wrap</span>(<span class="hljs-params">words, sep = <span class="hljs-string">&quot; &quot;</span>, vertSep = <span class="hljs-string">&quot;&quot;</span></span>) {
+  <span class="hljs-keyword">if</span> (words.<span class="hljs-property">length</span> == <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">txt</span>(<span class="hljs-string">&quot;&quot;</span>);
+  }
+  <span class="hljs-keyword">return</span> words.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">paragraph, word</span>) =&gt;</span>
+    <span class="hljs-title function_">concat</span>(paragraph, <span class="hljs-title function_">ifFlat</span>(<span class="hljs-title function_">horz</span>(sep, word), <span class="hljs-title function_">vert</span>(vertSep, word))),
+  );
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="sswrap ">
+                <a class="ss" href="#section-16">&#x00a7;</a>
+              </div>
+              <p>Display either <code>items[0] sep items[1] sep ... items[n]</code>
+or <code>items[0] vertSep \n items[1] vertSep \n ... items[n]</code>.
+Neither <code>sep</code> nor <code>vertSep</code> may contain newlines.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">function</span> <span class="hljs-title function_">sepBy</span>(<span class="hljs-params">items, sep = <span class="hljs-string">&quot; &quot;</span>, vertSep = <span class="hljs-string">&quot;&quot;</span></span>) {
+  <span class="hljs-keyword">let</span> vertItems = items.<span class="hljs-title function_">map</span>(<span class="hljs-function">(<span class="hljs-params">item, i</span>) =&gt;</span> {
+    <span class="hljs-keyword">return</span> i == items.<span class="hljs-property">length</span> - <span class="hljs-number">1</span> ? item : <span class="hljs-title function_">horz</span>(item, vertSep);
+  });
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">ifFlat</span>(<span class="hljs-title function_">horzArray</span>(<span class="hljs-title function_">intersperse</span>(sep, items)), <span class="hljs-title function_">vertArray</span>(vertItems));
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">parens</span>(<span class="hljs-params">center</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">horz</span>(<span class="hljs-string">&quot;(&quot;</span>, center, <span class="hljs-string">&quot;)&quot;</span>);
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">standardSexpr</span>(<span class="hljs-params">func, args</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">parens</span>(<span class="hljs-title function_">sepBy</span>([func].<span class="hljs-title function_">concat</span>(args), <span class="hljs-string">&quot; &quot;</span>));
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">lambdaLikeSexpr</span>(<span class="hljs-params">keyword, defn, body</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">ifFlat</span>(
+    <span class="hljs-title function_">parens</span>(<span class="hljs-title function_">sepBy</span>([keyword, defn, body], <span class="hljs-string">&quot; &quot;</span>)),
+    <span class="hljs-title function_">parens</span>(<span class="hljs-title function_">vert</span>(<span class="hljs-title function_">horz</span>(keyword, <span class="hljs-string">&quot; &quot;</span>, defn), <span class="hljs-title function_">horz</span>(<span class="hljs-string">&quot; &quot;</span>, body))),
+  );
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">beginLikeSexpr</span>(<span class="hljs-params">keyword, bodies</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">parens</span>(<span class="hljs-title function_">vert</span>(keyword, <span class="hljs-title function_">horz</span>(<span class="hljs-string">&quot; &quot;</span>, <span class="hljs-title function_">vertArray</span>(bodies))));
+}
+
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  txt,
+  horz,
+  horzArray,
+  vert,
+  vertArray,
+  concat,
+  concatArray,
+  ifFlat,
+  fullLine,
+  <span class="hljs-title class_">Doc</span>,
+  pretty,
+  wrap,
+  sepBy,
+  standardSexpr,
+  lambdaLikeSexpr,
+  beginLikeSexpr,
+};</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
